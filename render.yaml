@@ -1,0 +1,30 @@
+# Render.com deployment for Ariba/Coupa Agent (SANDBOX)
+services:
+  - type: web
+    name: ariba-coupa-agent-sandbox
+    runtime: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: ENVIRONMENT
+        value: sandbox
+      - key: AZURE_BLOB_CONNECTION_STRING
+        sync: false
+      - key: AZURE_BLOB_CONTAINER_NAME
+        value: ariba-coupa-sandbox
+      - key: STAGING_SQL_SERVER
+        sync: false
+      - key: STAGING_SQL_DATABASE
+        value: po_staging_sandbox
+      - key: STAGING_SQL_USERNAME
+        sync: false
+      - key: STAGING_SQL_PASSWORD
+        sync: false
+    disk:
+      name: data
+      mountPath: /app/data
+      sizeGB: 1
