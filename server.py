@@ -251,12 +251,14 @@ async def review_queue(confidence: Optional[str] = None):
     """Get pending POs for review, optionally filtered by confidence."""
     try:
         from services.processing.crosswalk_engine import get_staging_conn
+        import json
         conn = get_staging_conn()
         cur = conn.cursor()
 
         query = """
             SELECT id, intake_id, po_number, source_system, vendor_id_raw,
-                   vendor_id_p21, overall_confidence, review_status, received_at
+                   vendor_id_p21, overall_confidence, review_status, received_at,
+                   raw_payload
             FROM dbo.po_staging_log
             WHERE review_status = 'pending'
         """
@@ -270,17 +272,40 @@ async def review_queue(confidence: Optional[str] = None):
         rows = cur.fetchall()
         conn.close()
 
-        return [{
-            "id": r.id,
-            "intake_id": r.intake_id,
-            "po_number": r.po_number,
-            "source": r.source_system,
-            "vendor_raw": r.vendor_id_raw,
-            "vendor_p21": r.vendor_id_p21,
-            "confidence": r.overall_confidence,
-            "status": r.review_status,
-            "received": str(r.received_at) if r.received_at else None,
-        } for r in rows]
+        results = []
+        for r in rows:
+            # Parse raw_payload to get full PO details
+            payload_data = {}
+            try:
+                if r.raw_payload:
+                    payload_data = json.loads(r.raw_payload)
+            except:
+                pass
+            
+            header = payload_data.get('header', {})
+            lines = payload_data.get('lines', [])
+            
+            # Calculate total from lines
+            total = sum(line.get('extended_price', 0) or 0 for line in lines)
+            
+            results.append({
+                "id": r.id,
+                "intake_id": r.intake_id,
+                "po_number": r.po_number,
+                "source": r.source_system,
+                "vendor_raw": r.vendor_id_raw,
+                "vendor_p21": r.vendor_id_p21,
+                "confidence": r.overall_confidence,
+                "status": r.review_status,
+                "received": str(r.received_at) if r.received_at else None,
+                # Additional fields from payload
+                "supplier": header.get('supplier_name', ''),
+                "ship_to": header.get('ship2_name', ''),
+                "total": total,
+                "lines_count": len(lines),
+                "raw_payload": payload_data,
+            })
+        return results
     except Exception as e:
         logger.error(f"Review queue error: {e}")
         return []
