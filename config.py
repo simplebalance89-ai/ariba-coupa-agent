@@ -35,11 +35,17 @@ class Settings(BaseSettings):
     azure_openai_model: str = "gpt-4o"
 
     # ── Microsoft Graph API (email polling) ──
+    # Support both naming conventions (graph_* and AZURE_*)
     graph_client_id: str = ""
     graph_client_secret: str = ""
     graph_tenant_id: str = ""
     graph_mailbox: str = "orders@enproinc.com"
     graph_poll_interval: int = 60
+    
+    # Aliases for Azure AD credentials (used by email_poller)
+    azure_tenant_id: str = ""
+    azure_client_id: str = ""  
+    azure_client_secret: str = ""
 
     # ── Dynamics 365 CRM ──
     dynamics_org_url: str = ""

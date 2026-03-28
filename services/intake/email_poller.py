@@ -18,10 +18,12 @@ from email_classifier import classify_email, EmailClassification
 # ── Configuration ────────────────────────────────────────────────────────────
 
 GRAPH_API_BASE = "https://graph.microsoft.com/v1.0"
-MAILBOX = os.environ.get("GRAPH_MAILBOX", "peterw_conveyance@enproinc.com")
-TENANT_ID = os.environ.get("AZURE_TENANT_ID", "")
-CLIENT_ID = os.environ.get("AZURE_CLIENT_ID", "")
-CLIENT_SECRET = os.environ.get("AZURE_CLIENT_SECRET", "")
+MAILBOX = os.environ.get("GRAPH_MAILBOX", "orders@enproinc.com")
+
+# Support both naming conventions (AZURE_* and GRAPH_*)
+TENANT_ID = os.environ.get("AZURE_TENANT_ID") or os.environ.get("GRAPH_TENANT_ID", "")
+CLIENT_ID = os.environ.get("AZURE_CLIENT_ID") or os.environ.get("GRAPH_CLIENT_ID", "")
+CLIENT_SECRET = os.environ.get("AZURE_CLIENT_SECRET") or os.environ.get("GRAPH_CLIENT_SECRET", "")
 POLL_INTERVAL_SECONDS = int(os.environ.get("POLL_INTERVAL", "60"))
 
 # Folders
