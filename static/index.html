@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EnPro OMS — Order Review Portal</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f1117; color: #e0e0e0; }
+
+/* Layout */
+.app { display: grid; grid-template-columns: 300px 1fr; grid-template-rows: 60px 1fr; height: 100vh; }
+header { grid-column: 1 / -1; background: #1a1d27; border-bottom: 1px solid #2a2d3a; display: flex; align-items: center; padding: 0 24px; justify-content: space-between; }
+header h1 { font-size: 18px; color: #fff; }
+.stats-bar { display: flex; gap: 16px; font-size: 13px; }
+.stat { padding: 4px 12px; border-radius: 12px; font-weight: 600; }
+.stat.green { background: #0d3320; color: #4ade80; }
+.stat.yellow { background: #332b00; color: #fbbf24; }
+.stat.red { background: #3b1111; color: #f87171; }
+.stat.total { background: #1e293b; color: #94a3b8; }
+
+/* Sidebar */
+.sidebar { background: #141620; border-right: 1px solid #2a2d3a; overflow-y: auto; }
+.sidebar-header { padding: 16px; border-bottom: 1px solid #2a2d3a; }
+.sidebar-header h2 { font-size: 14px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
+.filter-tabs { display: flex; gap: 4px; margin-top: 8px; }
+.filter-tab { padding: 4px 10px; border-radius: 8px; font-size: 12px; cursor: pointer; border: 1px solid #2a2d3a; background: transparent; color: #94a3b8; }
+.filter-tab.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+.po-list { list-style: none; }
+.po-item { padding: 12px 16px; border-bottom: 1px solid #1e2030; cursor: pointer; transition: background 0.15s; }
+.po-item:hover { background: #1a1d2a; }
+.po-item.selected { background: #1e2a4a; border-left: 3px solid #2563eb; }
+.po-item .po-number { font-weight: 600; font-size: 14px; color: #fff; }
+.po-item .po-meta { font-size: 12px; color: #64748b; margin-top: 2px; }
+.po-item .confidence-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+.confidence-dot.green { background: #4ade80; }
+.confidence-dot.yellow { background: #fbbf24; }
+.confidence-dot.red { background: #f87171; }
+
+/* Main Panel */
+.main { padding: 24px; overflow-y: auto; }
+.empty-state { display: flex; align-items: center; justify-content: center; height: 100%; color: #475569; font-size: 16px; }
+
+/* PO Detail */
+.po-detail { max-width: 900px; }
+.po-detail h2 { font-size: 22px; margin-bottom: 16px; }
+.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+.detail-card { background: #1a1d27; border-radius: 8px; padding: 16px; border: 1px solid #2a2d3a; }
+.detail-card label { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+.detail-card .value { font-size: 16px; color: #fff; margin-top: 4px; }
+.confidence-badge { display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 13px; font-weight: 600; }
+.confidence-badge.green { background: #0d3320; color: #4ade80; }
+.confidence-badge.yellow { background: #332b00; color: #fbbf24; }
+.confidence-badge.red { background: #3b1111; color: #f87171; }
+
+/* Lines Table */
+.lines-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+.lines-table th { text-align: left; padding: 8px 12px; font-size: 11px; color: #64748b; text-transform: uppercase; border-bottom: 1px solid #2a2d3a; }
+.lines-table td { padding: 8px 12px; font-size: 14px; border-bottom: 1px solid #1e2030; }
+.lines-table tr:hover { background: #1a1d2a; }
+.match-score { font-size: 12px; padding: 2px 8px; border-radius: 8px; }
+.match-score.high { background: #0d3320; color: #4ade80; }
+.match-score.mid { background: #332b00; color: #fbbf24; }
+.match-score.low { background: #3b1111; color: #f87171; }
+
+/* Action Bar */
+.action-bar { display: flex; gap: 12px; padding: 16px 0; border-top: 1px solid #2a2d3a; margin-top: 16px; }
+.btn { padding: 10px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all 0.15s; }
+.btn-approve { background: #16a34a; color: #fff; }
+.btn-approve:hover { background: #15803d; }
+.btn-reject { background: #dc2626; color: #fff; }
+.btn-reject:hover { background: #b91c1c; }
+.btn-secondary { background: #334155; color: #e2e8f0; }
+.btn-secondary:hover { background: #475569; }
+
+/* Upload Section */
+.upload-section { margin-top: 24px; padding: 24px; background: #1a1d27; border-radius: 8px; border: 2px dashed #2a2d3a; text-align: center; }
+.upload-section input[type="file"] { margin: 12px 0; }
+
+/* Loading */
+.loading { text-align: center; padding: 40px; color: #64748b; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>EnPro OMS — Order Review Portal</h1>
+    <div class="stats-bar" id="statsBar">
+      <span class="stat total" id="statTotal">- total</span>
+      <span class="stat green" id="statGreen">- green</span>
+      <span class="stat yellow" id="statYellow">- yellow</span>
+      <span class="stat red" id="statRed">- red</span>
+      <span class="stat total" id="statPending">- pending</span>
+    </div>
+  </header>
+
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h2>Review Queue</h2>
+      <div class="filter-tabs">
+        <button class="filter-tab active" onclick="filterQueue('all')">All</button>
+        <button class="filter-tab" onclick="filterQueue('red')">Red</button>
+        <button class="filter-tab" onclick="filterQueue('yellow')">Yellow</button>
+        <button class="filter-tab" onclick="filterQueue('green')">Green</button>
+      </div>
+    </div>
+    <ul class="po-list" id="poList">
+      <li class="loading">Loading...</li>
+    </ul>
+
+    <div class="upload-section">
+      <p style="color: #64748b; font-size: 13px;">Upload PO File</p>
+      <input type="file" id="fileUpload" accept=".xml,.pdf">
+      <select id="uploadSource" style="padding: 6px; background: #141620; color: #e0e0e0; border: 1px solid #2a2d3a; border-radius: 4px;">
+        <option value="ariba">Ariba</option>
+        <option value="coupa">Coupa</option>
+        <option value="direct">Direct</option>
+      </select>
+      <br>
+      <button class="btn btn-secondary" onclick="uploadFile()" style="margin-top: 8px;">Process</button>
+    </div>
+  </div>
+
+  <div class="main" id="mainPanel">
+    <div class="empty-state">Select a PO from the queue to review</div>
+  </div>
+</div>
+
+<script>
+const API = '';
+let queue = [];
+let currentFilter = 'all';
+let selectedPO = null;
+
+async function loadStats() {
+  try {
+    const resp = await fetch(`${API}/api/v1/stats`);
+    const data = await resp.json();
+    document.getElementById('statTotal').textContent = `${data.total || 0} total`;
+    document.getElementById('statGreen').textContent = `${data.green || 0} green`;
+    document.getElementById('statYellow').textContent = `${data.yellow || 0} yellow`;
+    document.getElementById('statRed').textContent = `${data.red || 0} red`;
+    document.getElementById('statPending').textContent = `${data.pending || 0} pending`;
+  } catch (e) { console.error('Stats error:', e); }
+}
+
+async function loadQueue(filter) {
+  try {
+    const url = filter && filter !== 'all'
+      ? `${API}/api/v1/review/queue?confidence=${filter}`
+      : `${API}/api/v1/review/queue`;
+    const resp = await fetch(url);
+    queue = await resp.json();
+    renderQueue();
+  } catch (e) {
+    document.getElementById('poList').innerHTML = '<li class="loading">Error loading queue</li>';
+  }
+}
+
+function renderQueue() {
+  const list = document.getElementById('poList');
+  if (!queue.length) {
+    list.innerHTML = '<li class="loading">No POs pending review</li>';
+    return;
+  }
+  list.innerHTML = queue.map(po => `
+    <li class="po-item ${selectedPO === po.intake_id ? 'selected' : ''}" onclick="selectPO('${po.intake_id}')">
+      <div>
+        <span class="confidence-dot ${po.confidence}"></span>
+        <span class="po-number">${po.po_number || 'Unknown PO'}</span>
+      </div>
+      <div class="po-meta">${po.source || ''} &middot; ${po.vendor_raw || 'Unknown vendor'} &middot; ${po.received ? new Date(po.received).toLocaleDateString() : ''}</div>
+    </li>
+  `).join('');
+}
+
+function selectPO(intakeId) {
+  selectedPO = intakeId;
+  renderQueue();
+  const po = queue.find(p => p.intake_id === intakeId);
+  if (!po) return;
+
+  const panel = document.getElementById('mainPanel');
+  const scoreClass = s => s >= 0.9 ? 'high' : s >= 0.6 ? 'mid' : 'low';
+
+  panel.innerHTML = `
+    <div class="po-detail">
+      <h2>PO ${po.po_number || 'Unknown'} <span class="confidence-badge ${po.confidence}">${(po.confidence || '').toUpperCase()}</span></h2>
+
+      <div class="detail-grid">
+        <div class="detail-card">
+          <label>Source</label>
+          <div class="value">${po.source || '-'}</div>
+        </div>
+        <div class="detail-card">
+          <label>Vendor (Raw)</label>
+          <div class="value">${po.vendor_raw || '-'}</div>
+        </div>
+        <div class="detail-card">
+          <label>P21 Vendor ID</label>
+          <div class="value">${po.vendor_p21 || '<span style="color:#f87171">NOT MAPPED</span>'}</div>
+        </div>
+        <div class="detail-card">
+          <label>Received</label>
+          <div class="value">${po.received ? new Date(po.received).toLocaleString() : '-'}</div>
+        </div>
+      </div>
+
+      <h3 style="margin-bottom: 12px; color: #94a3b8;">Line Items</h3>
+      <p style="color: #475569; font-size: 13px; margin-bottom: 12px;">Line item details will load from PO detail endpoint when connected to staging DB.</p>
+
+      <div class="action-bar">
+        <button class="btn btn-approve" onclick="approvePO('${po.intake_id}')">Approve</button>
+        <button class="btn btn-reject" onclick="rejectPO('${po.intake_id}')">Reject</button>
+        <button class="btn btn-secondary" onclick="editMapping('${po.intake_id}')">Edit Mapping</button>
+      </div>
+    </div>
+  `;
+}
+
+async function approvePO(intakeId) {
+  const reviewer = prompt('Reviewer name:', 'Brittany');
+  if (!reviewer) return;
+  try {
+    const resp = await fetch(`${API}/api/v1/review/po/${intakeId}/approve`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({reviewer, notes: ''}),
+    });
+    const data = await resp.json();
+    alert(`PO ${intakeId} approved!`);
+    loadQueue(currentFilter);
+    loadStats();
+  } catch (e) { alert('Error: ' + e.message); }
+}
+
+async function rejectPO(intakeId) {
+  const reason = prompt('Rejection reason:');
+  if (!reason) return;
+  try {
+    await fetch(`${API}/api/v1/review/po/${intakeId}/reject`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({reviewer: 'reviewer', reason}),
+    });
+    alert(`PO ${intakeId} rejected.`);
+    loadQueue(currentFilter);
+    loadStats();
+  } catch (e) { alert('Error: ' + e.message); }
+}
+
+function editMapping(intakeId) {
+  alert('Mapping editor — coming in next iteration. For now, add mappings via the API:\nPOST /api/v1/review/crosswalk/vendor\nPOST /api/v1/review/crosswalk/item');
+}
+
+function filterQueue(filter) {
+  currentFilter = filter;
+  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  loadQueue(filter);
+}
+
+async function uploadFile() {
+  const fileInput = document.getElementById('fileUpload');
+  const source = document.getElementById('uploadSource').value;
+  if (!fileInput.files.length) { alert('Select a file first'); return; }
+
+  const formData = new FormData();
+  formData.append('file', fileInput.files[0]);
+  formData.append('source', source);
+
+  try {
+    const resp = await fetch(`${API}/api/v1/intake/upload`, {method: 'POST', body: formData});
+    const data = await resp.json();
+    alert(`Processed: ${data.po_no || 'Unknown'}\nConfidence: ${data.confidence || '-'}\nReview required: ${data.review_required}`);
+    loadQueue(currentFilter);
+    loadStats();
+    fileInput.value = '';
+  } catch (e) { alert('Upload error: ' + e.message); }
+}
+
+// Boot
+loadStats();
+loadQueue('all');
+setInterval(loadStats, 30000);
+</script>
+</body>
+</html>

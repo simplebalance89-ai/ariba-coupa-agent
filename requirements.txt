@@ -1,0 +1,23 @@
+# FastAPI & Server
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+python-multipart>=0.0.6
+
+# Azure
+azure-storage-blob>=12.19.0
+azure-identity>=1.15.0
+
+# HTTP Client (for Graph API)
+aiohttp>=3.9.0
+
+# Data & Utils
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+python-dotenv>=1.0.0
+
+# Azure AI (for PDF parsing via Document Intelligence)
+azure-ai-formrecognizer>=3.3.0
+
+# XML Parsing (for cXML)
+defusedxml>=0.7.1
+lxml>=4.9.0

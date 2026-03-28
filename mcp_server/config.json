@@ -1,0 +1,7 @@
+{
+  "odbc_connection_string": "DRIVER={ODBC Driver 17 for SQL Server};SERVER=P21_SERVER;DATABASE=P21_Database;UID=service_account;PWD=password_here",
+  "p21_company_no": 1,
+  "p21_location_id": 10,
+  "test_mode": true,
+  "log_path": "./logs/mcp_server.log"
+}
