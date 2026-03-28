@@ -513,6 +513,14 @@ async def stats():
             FROM dbo.po_staging_log
         """)
         row = cur.fetchone()
+        
+        # Get crosswalk stats
+        cur.execute("SELECT COUNT(*) as vendor_count FROM dbo.vendor_crosswalk WHERE is_active = 1")
+        vendor_row = cur.fetchone()
+        
+        cur.execute("SELECT COUNT(*) as item_count FROM dbo.item_crosswalk WHERE is_active = 1")
+        item_row = cur.fetchone()
+        
         conn.close()
         return {
             "total": row.total,
@@ -523,6 +531,68 @@ async def stats():
             "rejected": row.rejected,
             "pending": row.pending,
             "imported": row.imported,
+            "crosswalk": {
+                "vendors": vendor_row.vendor_count if vendor_row else 0,
+                "items": item_row.item_count if item_row else 0,
+            }
         }
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/api/v1/crosswalk/vendors")
+async def list_vendor_mappings(limit: int = 100):
+    """List vendor crosswalk mappings."""
+    try:
+        from services.processing.crosswalk_engine import get_staging_conn
+        conn = get_staging_conn()
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT source_system, source_vendor_id, source_vendor_name, 
+                   p21_vendor_id, p21_vendor_name, match_score, seen_count
+            FROM dbo.vendor_crosswalk
+            WHERE is_active = 1
+            ORDER BY seen_count DESC, match_score DESC
+        """ + (f" TOP {limit}" if limit else ""))
+        rows = cur.fetchall()
+        conn.close()
+        return [{
+            "source_system": r.source_system,
+            "source_vendor_id": r.source_vendor_id,
+            "source_vendor_name": r.source_vendor_name,
+            "p21_vendor_id": r.p21_vendor_id,
+            "p21_vendor_name": r.p21_vendor_name,
+            "match_score": r.match_score,
+            "seen_count": r.seen_count,
+        } for r in rows]
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/api/v1/crosswalk/items")
+async def list_item_mappings(limit: int = 100):
+    """List item crosswalk mappings."""
+    try:
+        from services.processing.crosswalk_engine import get_staging_conn
+        conn = get_staging_conn()
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT source_system, source_item_id, source_item_name,
+                   p21_item_id, p21_item_name, vendor_id, match_score
+            FROM dbo.item_crosswalk
+            WHERE is_active = 1
+            ORDER BY match_score DESC
+        """ + (f" TOP {limit}" if limit else ""))
+        rows = cur.fetchall()
+        conn.close()
+        return [{
+            "source_system": r.source_system,
+            "source_item_id": r.source_item_id,
+            "source_item_name": r.source_item_name,
+            "p21_item_id": r.p21_item_id,
+            "p21_item_name": r.p21_item_name,
+            "vendor_id": r.vendor_id,
+            "match_score": r.match_score,
+        } for r in rows]
     except Exception as e:
         return {"error": str(e)}
