@@ -5,8 +5,11 @@ Uses intake_id (SHA-256 hash) and PO number + source combo.
 
 import hashlib
 import logging
-import pyodbc
-from services.processing.crosswalk_engine import get_staging_conn
+
+try:
+    from services.processing.crosswalk_engine import get_staging_conn
+except Exception:
+    get_staging_conn = None
 
 logger = logging.getLogger(__name__)
 

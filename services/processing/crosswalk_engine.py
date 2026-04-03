@@ -5,15 +5,21 @@ Reads from Azure SQL staging DB (dbo.vendor_crosswalk, dbo.item_crosswalk).
 """
 
 import logging
-import pyodbc
 from typing import Optional
 from config import get_settings
+
+try:
+    import pyodbc
+except ImportError:
+    pyodbc = None
 
 logger = logging.getLogger(__name__)
 
 
 def get_staging_conn():
     """Get connection to Azure SQL staging database."""
+    if pyodbc is None:
+        raise RuntimeError("pyodbc not installed — Azure SQL not available in this environment")
     s = get_settings()
     return pyodbc.connect(
         f"DRIVER={s.staging_sql_driver};"

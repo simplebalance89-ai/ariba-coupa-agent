@@ -23,7 +23,10 @@ import sys
 from datetime import datetime, timedelta
 from io import StringIO
 
-import pyodbc
+try:
+    import pyodbc
+except ImportError:
+    pyodbc = None
 
 logging.basicConfig(
     level=logging.INFO,
