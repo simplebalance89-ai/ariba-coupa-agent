@@ -81,6 +81,49 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
+# ── CSV PO Parser ────────────────────────────────────────────────────────────
+
+def _parse_csv_po(content: str):
+    """Parse a CSV PO file into header + lines. Expects columns like po_no, ship2_name, item_id, qty, price."""
+    import csv as csvmod
+    from io import StringIO
+    from models import POHeader, POLineItem
+
+    reader = csvmod.DictReader(StringIO(content))
+    rows = list(reader)
+    if not rows:
+        raise ValueError("Empty CSV file")
+
+    first = rows[0]
+    header = POHeader(
+        po_no=first.get("po_no", first.get("po_number", first.get("PO Number", ""))),
+        order_date=first.get("order_date", first.get("Order Date", "")),
+        ship2_name=first.get("ship2_name", first.get("Ship To Name", first.get("ship_to_name", ""))),
+        ship2_add1=first.get("ship2_add1", first.get("Ship To Address", "")),
+        ship2_city=first.get("ship2_city", first.get("Ship To City", "")),
+        ship2_state=first.get("ship2_state", first.get("Ship To State", "")),
+        ship2_zip=first.get("ship2_zip", first.get("Ship To Zip", "")),
+        ship2_country=first.get("ship2_country", "US"),
+        supplier_name=first.get("supplier_name", first.get("Supplier", first.get("vendor_name", ""))),
+        buyer=first.get("buyer", first.get("Buyer", "")),
+        buyer_email=first.get("buyer_email", ""),
+        comments=first.get("comments", first.get("delivery_instructions", "")),
+    )
+
+    lines = []
+    for i, row in enumerate(rows, 1):
+        lines.append(POLineItem(
+            line_no=int(row.get("line_no", i)),
+            supplier_part_id=row.get("item_id", row.get("supplier_part_id", row.get("Part Number", row.get("customer_part_number", "")))),
+            item_description=row.get("description", row.get("item_description", row.get("Description", ""))),
+            qty_ordered=float(row.get("qty", row.get("qty_ordered", row.get("Quantity", 0))) or 0),
+            unit_price=float(row.get("unit_price", row.get("price", row.get("Unit Price", 0))) or 0),
+            unit_of_measure=row.get("uom", row.get("unit_of_measure", row.get("UOM", "EA"))),
+        ))
+
+    return header, lines, content
+
+
 # ── Health ────────────────────────────────────────────────────────────────────
 
 @app.get("/health")
@@ -153,6 +196,9 @@ async def intake_upload(
     if filename.lower().endswith(".xml"):
         header, lines, raw = po_parser.parse_cxml(content.decode("utf-8"))
         fmt = "cxml"
+    elif filename.lower().endswith(".csv"):
+        header, lines, raw = _parse_csv_po(content.decode("utf-8-sig"))
+        fmt = "csv"
     elif filename.lower().endswith(".pdf"):
         import tempfile
         with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
@@ -164,7 +210,7 @@ async def intake_upload(
         os.unlink(tmp_path)
         fmt = "pdf"
     else:
-        raise HTTPException(400, "Unsupported file type. Upload .xml or .pdf")
+        raise HTTPException(400, "Unsupported file type. Upload .xml, .csv, or .pdf")
 
     payload = await _process_po_to_so(header, lines, raw, source, fmt)
     return payload
@@ -709,47 +755,64 @@ async def upload_p21_csv(
     return {"status": "uploaded", "file_type": file_type, "size": size, "path": dest}
 
 
+_build_status = {"state": "idle", "result": None}
+
 @app.post("/api/v1/crosswalk/build")
-async def build_crosswalks():
-    """Build crosswalk CSVs from uploaded P21 exports."""
-    try:
-        from services.processing.crosswalk_csv_builder import build_all
+async def build_crosswalks(background_tasks=None):
+    """Build crosswalk CSVs from uploaded P21 exports. Runs in background."""
+    import threading
 
-        headers_path = os.path.join(P21_DATA_DIR, "p21_headers.csv")
-        lines_path = os.path.join(P21_DATA_DIR, "p21_lines.csv")
-        customers_path = os.path.join(P21_DATA_DIR, "p21_customers.csv")
+    headers_path = os.path.join(P21_DATA_DIR, "p21_headers.csv")
+    lines_path = os.path.join(P21_DATA_DIR, "p21_lines.csv")
+    customers_path = os.path.join(P21_DATA_DIR, "p21_customers.csv")
 
-        missing = []
-        if not os.path.exists(headers_path): missing.append("headers")
-        if not os.path.exists(lines_path): missing.append("lines")
-        if not os.path.exists(customers_path): missing.append("customers")
-        if missing:
-            raise HTTPException(400, f"Missing P21 uploads: {', '.join(missing)}. Upload via POST /api/v1/crosswalk/upload first.")
+    missing = []
+    if not os.path.exists(headers_path): missing.append("headers")
+    if not os.path.exists(lines_path): missing.append("lines")
+    if not os.path.exists(customers_path): missing.append("customers")
+    if missing:
+        raise HTTPException(400, f"Missing P21 uploads: {', '.join(missing)}. Upload via POST /api/v1/crosswalk/upload first.")
 
-        build_all(
-            headers_path=headers_path,
-            lines_path=lines_path,
-            customers_path=customers_path,
-            output_dir=settings.crosswalk_dir,
-        )
-        # Reload the engine
+    if _build_status["state"] == "building":
+        return {"status": "already_building"}
+
+    def _do_build():
         global _customer_engine
-        _customer_engine = None
+        _build_status["state"] = "building"
+        _build_status["result"] = None
+        try:
+            from services.processing.crosswalk_csv_builder import build_all
+            build_all(
+                headers_path=headers_path,
+                lines_path=lines_path,
+                customers_path=customers_path,
+                output_dir=settings.crosswalk_dir,
+            )
+            _customer_engine = None
 
-        # Count results
-        import glob
-        csv_files = glob.glob(os.path.join(settings.crosswalk_dir, "*.csv"))
-        counts = {}
-        for f in csv_files:
-            name = os.path.basename(f)
-            with open(f) as fh:
-                counts[name] = sum(1 for _ in fh) - 1  # minus header
+            import glob as g
+            csv_files = g.glob(os.path.join(settings.crosswalk_dir, "*.csv"))
+            counts = {}
+            for f in csv_files:
+                name = os.path.basename(f)
+                with open(f) as fh:
+                    counts[name] = sum(1 for _ in fh) - 1
+            _build_status["result"] = {"status": "success", "files": counts}
+            _build_status["state"] = "done"
+            logger.info(f"Crosswalk build complete: {counts}")
+        except Exception as e:
+            _build_status["result"] = {"status": "error", "error": str(e)}
+            _build_status["state"] = "error"
+            logger.error(f"Crosswalk build failed: {e}")
 
-        return {"status": "success", "crosswalk_dir": settings.crosswalk_dir, "files": counts}
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(500, str(e))
+    threading.Thread(target=_do_build, daemon=True).start()
+    return {"status": "building", "message": "Build started in background. Poll GET /api/v1/crosswalk/build/status"}
+
+
+@app.get("/api/v1/crosswalk/build/status")
+async def build_status():
+    """Check crosswalk build progress."""
+    return {"state": _build_status["state"], "result": _build_status["result"]}
 
 
 @app.get("/api/v1/crosswalk/customers")

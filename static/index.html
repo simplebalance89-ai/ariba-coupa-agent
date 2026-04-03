@@ -206,7 +206,11 @@ tr:hover { background: #141620; }
     <div class="pipe-step"><div class="pipe-num">4</div><div><div class="pipe-title">Item Match</div><div class="pipe-desc">Match each line's supplier_part_id to P21 inv_mast_uid via customer_part_number crosswalk (100% populated from oe_line).</div></div></div>
     <div class="pipe-step"><div class="pipe-num">5</div><div><div class="pipe-title">Confidence Score</div><div class="pipe-desc">4-dimension scoring: customer (0.30) + ship-to (0.15) + items (0.45) + dedup (0.10). Green/Yellow/Red.</div></div></div>
     <div class="pipe-step"><div class="pipe-num">6</div><div><div class="pipe-title">CISM SO Generation</div><div class="pipe-desc">Generate P21 Order/Quote Import CSV (header + lines) matching the CISM batch schema. Green = auto-stage.</div></div></div>
-    <div class="pipe-step"><div class="pipe-num">7</div><div><div class="pipe-title">Learning Loop</div><div class="pipe-desc">Every approved match feeds back into crosswalk CSVs. Customer + item + ship-to mappings grow over time.</div></div></div>
+    <div class="pipe-step"><div class="pipe-num">7</div><div><div class="pipe-title">Learning Loop</div><div class="pipe-desc">When Brittany approves a PO (or it auto-approves as green), the system saves what it learned:<br>
+      <span style="color:#4ade80;">Customer:</span> "Ship-to name 'Waupaca Foundry' at zip 47586 = P21 customer 208672" — next time this customer sends a PO, instant match.<br>
+      <span style="color:#4ade80;">Items:</span> "Customer 208672's part# PH0260 = P21 inv_mast_uid 7931" — every line item match gets remembered per customer.<br>
+      <span style="color:#4ade80;">PO Link:</span> "PO# 4500867075 belongs to customer 208672" — detects duplicates and confirms customer identity.<br>
+      <span style="color:#64748b;">Result: The more POs processed, the fewer go to review. Day 1 = mostly yellow/red. Month 1 = mostly green.</span></div></div></div>
   </div>
 
 </div>
@@ -377,25 +381,35 @@ async function uploadAndBuildXW() {
       document.getElementById('xw' + type.charAt(0).toUpperCase() + type.slice(1) + 'Status').textContent = `Uploaded (${(d.size/1024).toFixed(0)} KB)`;
     }
 
-    // Build crosswalks
+    // Trigger build (runs in background)
     btn.textContent = 'Building crosswalks...';
-    result.innerHTML = '<div style="color:#fbbf24;">Building crosswalk tables from P21 data...</div>';
+    result.innerHTML = '<div style="color:#fbbf24;">Building crosswalk tables from P21 data (this may take a minute)...</div>';
     const br = await fetch(`${API}/api/v1/crosswalk/build`, {method:'POST', headers:{'Content-Type':'application/json'}});
     if (!br.ok) { const err = await br.json(); throw new Error(err.detail || 'Build failed'); }
-    const bd = await br.json();
 
-    // Show results
-    let filesHtml = '';
-    if (bd.files) {
-      filesHtml = Object.entries(bd.files).map(([name,count]) => `<div>${name}: <strong>${count}</strong> rows</div>`).join('');
+    // Poll for completion
+    let tries = 0;
+    while (tries < 120) {
+      await new Promise(r => setTimeout(r, 2000));
+      const sr = await fetch(`${API}/api/v1/crosswalk/build/status`);
+      const sd = await sr.json();
+      if (sd.state === 'done') {
+        let filesHtml = '';
+        if (sd.result?.files) {
+          filesHtml = Object.entries(sd.result.files).map(([name,count]) => `<div>${name}: <strong>${count}</strong> rows</div>`).join('');
+        }
+        result.innerHTML = `<div style="background:#0d3320; border:1px solid #166534; border-radius:8px; padding:16px; color:#4ade80;">
+          <strong>Crosswalk built successfully!</strong><br>${filesHtml}
+        </div>`;
+        loadCustXW();
+        loadStats();
+        break;
+      } else if (sd.state === 'error') {
+        throw new Error(sd.result?.error || 'Build failed');
+      }
+      result.innerHTML = `<div style="color:#fbbf24;">Building... (${tries * 2}s elapsed)</div>`;
+      tries++;
     }
-    result.innerHTML = `<div style="background:#0d3320; border:1px solid #166534; border-radius:8px; padding:16px; color:#4ade80;">
-      <strong>Crosswalk built successfully!</strong><br>${filesHtml}
-    </div>`;
-
-    // Reload crosswalk display
-    loadCustXW();
-    loadStats();
   } catch(e) {
     result.innerHTML = `<div style="background:#3b1111; border:1px solid #991b1b; border-radius:8px; padding:16px; color:#f87171;">Error: ${e.message}</div>`;
   } finally {
