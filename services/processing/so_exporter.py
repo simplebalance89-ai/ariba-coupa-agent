@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 def get_p21_conn(server: str, database: str, uid: str = "", pwd: str = "",
-                 driver: str = "{ODBC Driver 17 for SQL Server}") -> pyodbc.Connection:
+                 driver: str = "{ODBC Driver 17 for SQL Server}"):
     conn_str = f"DRIVER={driver};SERVER={server};DATABASE={database};"
     if uid:
         conn_str += f"UID={uid};PWD={pwd};"
