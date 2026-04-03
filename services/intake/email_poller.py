@@ -12,7 +12,7 @@ from typing import Optional, List, Dict, Any
 from dataclasses import dataclass
 
 import aiohttp
-from email_classifier import classify_email, EmailClassification
+from services.intake.email_classifier import classify_email, EmailClassification
 
 
 # ── Configuration ────────────────────────────────────────────────────────────

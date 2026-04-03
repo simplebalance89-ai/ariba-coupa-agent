@@ -12,7 +12,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Optional
 
-from address_normalizer import (
+from services.processing.address_normalizer import (
     normalize_name, normalize_address, normalize_zip,
     name_similarity, composite_address_score,
 )

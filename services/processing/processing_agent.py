@@ -12,8 +12,8 @@ from dataclasses import dataclass, asdict
 
 from models import POHeader, POLineItem
 from cism_generator import generate_cism_file
-from blob_uploader import BlobUploader
-from confidence_scorer import score_payload, ConfidenceResult
+from services.processing.blob_uploader import BlobUploader
+from services.processing.confidence_scorer import score_payload, ConfidenceResult
 
 
 # ── Configuration ────────────────────────────────────────────────────────────

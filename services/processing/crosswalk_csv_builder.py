@@ -19,7 +19,7 @@ import os
 from collections import defaultdict
 from datetime import datetime
 
-from address_normalizer import normalize_name, normalize_address, normalize_zip
+from services.processing.address_normalizer import normalize_name, normalize_address, normalize_zip
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
 logger = logging.getLogger(__name__)

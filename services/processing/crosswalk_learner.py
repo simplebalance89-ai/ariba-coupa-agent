@@ -12,7 +12,7 @@ import logging
 import os
 from datetime import datetime
 
-from address_normalizer import normalize_name, normalize_zip, normalize_address
+from services.processing.address_normalizer import normalize_name, normalize_zip, normalize_address
 
 logger = logging.getLogger(__name__)
 
