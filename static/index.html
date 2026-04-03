@@ -160,17 +160,40 @@ tr:hover { background: #141620; }
   <!-- CROSSWALK -->
   <div class="tab-panel" id="panel-crosswalk">
     <div class="xw-section">
+      <h3>Seed Crosswalk from P21 Data</h3>
+      <p style="color:#64748b; font-size:13px; margin-bottom:12px;">Upload the 3 P21 CSV exports (SO Headers, SO Lines, Customers), then click Build to generate crosswalk tables.</p>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:12px;">
+        <div>
+          <label style="font-size:11px; color:#64748b; text-transform:uppercase;">SO Headers CSV</label><br>
+          <input type="file" id="xwHeaders" accept=".csv" style="margin-top:4px;">
+          <div id="xwHeadersStatus" style="font-size:11px; color:#475569; margin-top:4px;"></div>
+        </div>
+        <div>
+          <label style="font-size:11px; color:#64748b; text-transform:uppercase;">SO Lines CSV</label><br>
+          <input type="file" id="xwLines" accept=".csv" style="margin-top:4px;">
+          <div id="xwLinesStatus" style="font-size:11px; color:#475569; margin-top:4px;"></div>
+        </div>
+        <div>
+          <label style="font-size:11px; color:#64748b; text-transform:uppercase;">Customers CSV</label><br>
+          <input type="file" id="xwCustomers" accept=".csv" style="margin-top:4px;">
+          <div id="xwCustomersStatus" style="font-size:11px; color:#475569; margin-top:4px;"></div>
+        </div>
+      </div>
+      <button class="btn btn-green" onclick="uploadAndBuildXW()" id="buildBtn">Upload & Build Crosswalk</button>
+      <div id="buildResult" style="margin-top:12px;"></div>
+    </div>
+    <div class="xw-section">
       <h3>Customer Crosswalk</h3>
       <p style="color:#64748b; font-size:13px; margin-bottom:12px;">Maps Ariba/Coupa ship-to names to P21 customer IDs. Learns from every approved PO.</p>
       <table id="custXWTable">
         <tr><th>P21 Customer ID</th><th>Customer Name</th><th>Ship-To Name</th><th>Ship-To Zip</th><th>Source</th><th>Method</th><th>Seen</th></tr>
       </table>
-      <div id="custXWEmpty" class="empty" style="padding:20px;">Loading crosswalk data...</div>
+      <div id="custXWEmpty" class="empty" style="padding:20px;">No crosswalk data yet. Upload P21 CSVs above to seed.</div>
     </div>
     <div class="xw-section">
       <h3>Customer-Item Crosswalk</h3>
-      <p style="color:#64748b; font-size:13px; margin-bottom:12px;">Maps customer part numbers to P21 items (inv_mast_uid). Seeded from 45,923 SO lines.</p>
-      <div class="empty" style="padding:20px;">Item crosswalk data available via API: GET /api/v1/crosswalk/items</div>
+      <p style="color:#64748b; font-size:13px; margin-bottom:12px;">Maps customer part numbers to P21 items (inv_mast_uid). Seeded from SO lines.</p>
+      <div class="empty" style="padding:20px;">Item crosswalk populates after build.</div>
     </div>
   </div>
 
@@ -326,6 +349,59 @@ async function uploadFile() {
     loadQueue(currentFilter); loadStats();
     fi.value = '';
   } catch(e) { alert('Upload error: ' + e.message); }
+}
+
+async function uploadAndBuildXW() {
+  const hdr = document.getElementById('xwHeaders');
+  const lin = document.getElementById('xwLines');
+  const cst = document.getElementById('xwCustomers');
+  if (!hdr.files.length || !lin.files.length || !cst.files.length) {
+    alert('Please select all 3 CSV files (SO Headers, SO Lines, Customers)');
+    return;
+  }
+  const btn = document.getElementById('buildBtn');
+  const result = document.getElementById('buildResult');
+  btn.disabled = true;
+  btn.textContent = 'Uploading...';
+  result.innerHTML = '<div style="color:#64748b;">Uploading CSVs...</div>';
+
+  try {
+    // Upload each file
+    for (const [input, type] of [[hdr,'headers'],[lin,'lines'],[cst,'customers']]) {
+      const fd = new FormData();
+      fd.append('file', input.files[0]);
+      fd.append('file_type', type);
+      const r = await fetch(`${API}/api/v1/crosswalk/upload`, {method:'POST', body:fd});
+      if (!r.ok) throw new Error(`Upload ${type} failed: ${r.status}`);
+      const d = await r.json();
+      document.getElementById('xw' + type.charAt(0).toUpperCase() + type.slice(1) + 'Status').textContent = `Uploaded (${(d.size/1024).toFixed(0)} KB)`;
+    }
+
+    // Build crosswalks
+    btn.textContent = 'Building crosswalks...';
+    result.innerHTML = '<div style="color:#fbbf24;">Building crosswalk tables from P21 data...</div>';
+    const br = await fetch(`${API}/api/v1/crosswalk/build`, {method:'POST', headers:{'Content-Type':'application/json'}});
+    if (!br.ok) { const err = await br.json(); throw new Error(err.detail || 'Build failed'); }
+    const bd = await br.json();
+
+    // Show results
+    let filesHtml = '';
+    if (bd.files) {
+      filesHtml = Object.entries(bd.files).map(([name,count]) => `<div>${name}: <strong>${count}</strong> rows</div>`).join('');
+    }
+    result.innerHTML = `<div style="background:#0d3320; border:1px solid #166534; border-radius:8px; padding:16px; color:#4ade80;">
+      <strong>Crosswalk built successfully!</strong><br>${filesHtml}
+    </div>`;
+
+    // Reload crosswalk display
+    loadCustXW();
+    loadStats();
+  } catch(e) {
+    result.innerHTML = `<div style="background:#3b1111; border:1px solid #991b1b; border-radius:8px; padding:16px; color:#f87171;">Error: ${e.message}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Upload & Build Crosswalk';
+  }
 }
 
 async function loadCustXW() {

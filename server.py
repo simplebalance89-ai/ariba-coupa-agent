@@ -687,26 +687,67 @@ async def quotes_status():
 
 # ── Crosswalk Build ─────────────────────────────────────────────────────────
 
-class CrosswalkBuildRequest(BaseModel):
-    headers_csv: str = ""
-    lines_csv: str = ""
-    customers_csv: str = ""
+P21_DATA_DIR = "./p21_data"
+
+@app.post("/api/v1/crosswalk/upload")
+async def upload_p21_csv(
+    file: UploadFile = File(...),
+    file_type: str = Form(...),  # "headers", "lines", or "customers"
+):
+    """Upload a P21 CSV export. file_type must be 'headers', 'lines', or 'customers'."""
+    if file_type not in ("headers", "lines", "customers"):
+        raise HTTPException(400, "file_type must be 'headers', 'lines', or 'customers'")
+
+    os.makedirs(P21_DATA_DIR, exist_ok=True)
+    dest = os.path.join(P21_DATA_DIR, f"p21_{file_type}.csv")
+    content = await file.read()
+    with open(dest, "wb") as f:
+        f.write(content)
+
+    size = len(content)
+    logger.info(f"Uploaded P21 {file_type} CSV: {file.filename} ({size} bytes) -> {dest}")
+    return {"status": "uploaded", "file_type": file_type, "size": size, "path": dest}
+
 
 @app.post("/api/v1/crosswalk/build")
-async def build_crosswalks(req: CrosswalkBuildRequest):
-    """Build crosswalk CSVs from P21 SO exports."""
+async def build_crosswalks():
+    """Build crosswalk CSVs from uploaded P21 exports."""
     try:
         from services.processing.crosswalk_csv_builder import build_all
+
+        headers_path = os.path.join(P21_DATA_DIR, "p21_headers.csv")
+        lines_path = os.path.join(P21_DATA_DIR, "p21_lines.csv")
+        customers_path = os.path.join(P21_DATA_DIR, "p21_customers.csv")
+
+        missing = []
+        if not os.path.exists(headers_path): missing.append("headers")
+        if not os.path.exists(lines_path): missing.append("lines")
+        if not os.path.exists(customers_path): missing.append("customers")
+        if missing:
+            raise HTTPException(400, f"Missing P21 uploads: {', '.join(missing)}. Upload via POST /api/v1/crosswalk/upload first.")
+
         build_all(
-            headers_path=req.headers_csv,
-            lines_path=req.lines_csv,
-            customers_path=req.customers_csv,
+            headers_path=headers_path,
+            lines_path=lines_path,
+            customers_path=customers_path,
             output_dir=settings.crosswalk_dir,
         )
         # Reload the engine
         global _customer_engine
         _customer_engine = None
-        return {"status": "success", "crosswalk_dir": settings.crosswalk_dir}
+
+        # Count results
+        import glob
+        csv_files = glob.glob(os.path.join(settings.crosswalk_dir, "*.csv"))
+        counts = {}
+        for f in csv_files:
+            name = os.path.basename(f)
+            with open(f) as fh:
+                counts[name] = sum(1 for _ in fh) - 1  # minus header
+
+        return {"status": "success", "crosswalk_dir": settings.crosswalk_dir, "files": counts}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(500, str(e))
 
