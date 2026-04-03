@@ -666,6 +666,177 @@ async def get_po_detail(intake_id: str):
     return po
 
 
+class EditPORequest(BaseModel):
+    customer_id_p21: Optional[str] = None
+    customer_name_p21: Optional[str] = None
+    ship2_name: Optional[str] = None
+    ship2_add1: Optional[str] = None
+    ship2_city: Optional[str] = None
+    ship2_state: Optional[str] = None
+    ship2_zip: Optional[str] = None
+    lines: Optional[list] = None  # [{line_no, item_id_p21, qty_ordered, unit_price, ...}]
+    notes: Optional[str] = None
+
+@app.post("/api/v1/review/po/{intake_id}/edit")
+async def edit_po(intake_id: str, req: EditPORequest):
+    """Edit a PO — update customer mapping, line items, ship-to, etc."""
+    po = local_store.get_po(intake_id)
+    if not po:
+        raise HTTPException(404, f"PO {intake_id} not found")
+
+    updates = {}
+    header = po.get("header", {})
+    cust_match = po.get("customer_match", {})
+
+    if req.customer_id_p21 is not None:
+        header["customer_id_p21"] = req.customer_id_p21
+        header["customer_name_p21"] = req.customer_name_p21 or ""
+        header["customer_match_method"] = "manual_edit"
+        header["customer_match_score"] = 1.0
+        cust_match["p21_id"] = req.customer_id_p21
+        cust_match["name"] = req.customer_name_p21 or ""
+        cust_match["score"] = 1.0
+        cust_match["method"] = "manual_edit"
+        updates["customer_match"] = cust_match
+
+    if req.ship2_name is not None: header["ship2_name"] = req.ship2_name
+    if req.ship2_add1 is not None: header["ship2_add1"] = req.ship2_add1
+    if req.ship2_city is not None: header["ship2_city"] = req.ship2_city
+    if req.ship2_state is not None: header["ship2_state"] = req.ship2_state
+    if req.ship2_zip is not None: header["ship2_zip"] = req.ship2_zip
+    updates["header"] = header
+
+    if req.lines is not None:
+        existing_lines = po.get("lines", [])
+        for edit_line in req.lines:
+            ln = edit_line.get("line_no")
+            for el in existing_lines:
+                if el.get("line_no") == ln:
+                    if "item_id_p21" in edit_line: el["item_id_p21"] = edit_line["item_id_p21"]
+                    if "qty_ordered" in edit_line: el["qty_ordered"] = edit_line["qty_ordered"]
+                    if "unit_price" in edit_line: el["unit_price"] = edit_line["unit_price"]
+                    if "unit_of_measure" in edit_line: el["unit_of_measure"] = edit_line["unit_of_measure"]
+                    if "item_description" in edit_line: el["item_description"] = edit_line["item_description"]
+                    el["crosswalk_match_score"] = 1.0  # manual = 100%
+                    break
+        updates["lines"] = existing_lines
+        # Recalculate item scores
+        updates["item_scores"] = [l.get("crosswalk_match_score", 0) for l in existing_lines]
+
+    if req.notes is not None:
+        updates["edit_notes"] = req.notes
+
+    updates["edited_at"] = datetime.utcnow().isoformat()
+    local_store.update_po(intake_id, updates)
+    return {"status": "edited", "intake_id": intake_id}
+
+
+# ── CISM Schema Reference ───────────────────────────────────────────────────
+
+CISM_HEADER_SCHEMA = [
+    {"field": "Import Set No", "type": "Alphanumeric", "required": True, "max_len": 8, "desc": "Unique batch ID linking header to lines"},
+    {"field": "Customer ID", "type": "Decimal", "required": True, "max_len": 19, "desc": "P21 customer_id from crosswalk match"},
+    {"field": "Customer Name", "type": "Alphanumeric", "required": True, "max_len": 50, "desc": "P21 customer name"},
+    {"field": "Company ID", "type": "Alphanumeric", "required": True, "max_len": 8, "desc": "P21 company (default '1')"},
+    {"field": "Sales Location ID", "type": "Decimal", "required": True, "max_len": 9, "desc": "P21 location (default 10)"},
+    {"field": "Customer PO Number", "type": "Alphanumeric", "required": False, "max_len": 50, "desc": "Customer's PO# from Ariba/Coupa"},
+    {"field": "Contact ID", "type": "Alphanumeric", "required": True, "max_len": 16, "desc": "P21 contact ID"},
+    {"field": "Contact Name", "type": "Alphanumeric", "required": True, "max_len": 50, "desc": "Buyer/contact name from PO"},
+    {"field": "Taker", "type": "Alphanumeric", "required": True, "max_len": 30, "desc": "Order taker / inside sales rep"},
+    {"field": "Job Name", "type": "Alphanumeric", "required": False, "max_len": 40, "desc": "Job/project name"},
+    {"field": "Order Date", "type": "DateTime", "required": False, "max_len": 8, "desc": "PO date (MM/DD/YYYY)"},
+    {"field": "Requested Date", "type": "DateTime", "required": False, "max_len": 8, "desc": "Requested delivery date"},
+    {"field": "Quote", "type": "Alphanumeric", "required": False, "max_len": 1, "desc": "Quote flag"},
+    {"field": "Approved", "type": "Alphanumeric", "required": False, "max_len": 1, "desc": "Y=approved, N=pending"},
+    {"field": "Ship To ID", "type": "Numeric", "required": True, "max_len": 9, "desc": "P21 ship-to address ID"},
+    {"field": "Ship To Name", "type": "Alphanumeric", "required": True, "max_len": 50, "desc": "Ship-to company name"},
+    {"field": "Ship To Address 1", "type": "Alphanumeric", "required": False, "max_len": 50, "desc": "Street address line 1"},
+    {"field": "Ship To Address 2", "type": "Alphanumeric", "required": False, "max_len": 50, "desc": "Street address line 2"},
+    {"field": "Ship To City", "type": "Alphanumeric", "required": False, "max_len": 50, "desc": "City"},
+    {"field": "Ship To State", "type": "Alphanumeric", "required": False, "max_len": 50, "desc": "State"},
+    {"field": "Ship To Zip Code", "type": "Alphanumeric", "required": False, "max_len": 10, "desc": "Zip code"},
+    {"field": "Ship To Country", "type": "Alphanumeric", "required": False, "max_len": 50, "desc": "Country code"},
+    {"field": "Packing Basis", "type": "Alphanumeric", "required": True, "max_len": 16, "desc": "Partial/Order, Item Complete, etc."},
+    {"field": "Delivery Instructions", "type": "Alphanumeric", "required": False, "max_len": 255, "desc": "Shipping/delivery notes"},
+    {"field": "Terms", "type": "Alphanumeric", "required": False, "max_len": 2, "desc": "Payment terms ID"},
+    {"field": "Carrier ID", "type": "Numeric", "required": False, "max_len": 9, "desc": "P21 carrier ID"},
+    {"field": "Will Call", "type": "Alphanumeric", "required": False, "max_len": 1, "desc": "Y/N will call pickup"},
+    {"field": "Ship To Email Address", "type": "Alphanumeric", "required": False, "max_len": 255, "desc": "Email for ship-to contact"},
+    {"field": "Promise Date", "type": "DateTime", "required": False, "max_len": 8, "desc": "Promised delivery date"},
+    {"field": "Supplier Order No", "type": "Alphanumeric", "required": False, "max_len": 255, "desc": "Source system reference"},
+]
+
+CISM_LINE_SCHEMA = [
+    {"field": "Import Set Number", "type": "Alphanumeric", "required": True, "max_len": 8, "desc": "Must match header Import Set No"},
+    {"field": "Line No", "type": "Numeric", "required": True, "max_len": 9, "desc": "Sequential line number"},
+    {"field": "Item ID", "type": "Alphanumeric", "required": True, "max_len": 40, "desc": "P21 item ID from crosswalk"},
+    {"field": "Unit Quantity", "type": "Numeric", "required": True, "max_len": 10, "desc": "Quantity ordered"},
+    {"field": "Unit of Measure", "type": "Alphanumeric", "required": True, "max_len": 8, "desc": "UOM (EA, CS, FT, etc.)"},
+    {"field": "Unit Price", "type": "Decimal", "required": False, "max_len": "19,4", "desc": "Price per unit"},
+    {"field": "Extended Description", "type": "Alphanumeric", "required": False, "max_len": 255, "desc": "Item description from PO"},
+    {"field": "Source Location ID", "type": "Numeric", "required": False, "max_len": 9, "desc": "Sourcing warehouse"},
+    {"field": "Ship Location ID", "type": "Numeric", "required": False, "max_len": 9, "desc": "Shipping warehouse"},
+    {"field": "Product Group ID", "type": "Alphanumeric", "required": False, "max_len": 8, "desc": "P21 product group"},
+    {"field": "Supplier ID", "type": "Numeric", "required": False, "max_len": 9, "desc": "Vendor/supplier ID"},
+    {"field": "Required Date", "type": "DateTime", "required": False, "max_len": 8, "desc": "Line-level required date"},
+    {"field": "Disposition", "type": "Alphanumeric", "required": False, "max_len": 1, "desc": "B=Backorder, D=Direct, S=Special, H=Hold"},
+    {"field": "Manual Price Override", "type": "Alphanumeric", "required": False, "max_len": 1, "desc": "Y=use provided price"},
+    {"field": "Capture Usage", "type": "Alphanumeric", "required": True, "max_len": 1, "desc": "Y/N capture usage tracking"},
+    {"field": "Item Description", "type": "Alphanumeric", "required": False, "max_len": 40, "desc": "Short item description"},
+]
+
+@app.get("/api/v1/cism/schema")
+async def cism_schema():
+    """Return the P21 CISM Order/Quote Import schema."""
+    return {"header": CISM_HEADER_SCHEMA, "line": CISM_LINE_SCHEMA}
+
+
+# ── Quote Crosswalk (Dynamics) ──────────────────────────────────────────────
+
+QUOTE_DATA_DIR = "./quote_data"
+
+@app.post("/api/v1/crosswalk/upload-quotes")
+async def upload_quote_data(file: UploadFile = File(...)):
+    """Upload Dynamics quote JSON or CSV for crosswalk reference."""
+    os.makedirs(QUOTE_DATA_DIR, exist_ok=True)
+    content = await file.read()
+    filename = file.filename or "quotes.json"
+    dest = os.path.join(QUOTE_DATA_DIR, filename)
+    with open(dest, "wb") as f:
+        f.write(content)
+    return {"status": "uploaded", "file": filename, "size": len(content)}
+
+
+@app.get("/api/v1/crosswalk/quotes")
+async def list_quotes(limit: int = 100):
+    """List Dynamics quote data if available."""
+    import json as jsonmod
+    results = []
+    if not os.path.exists(QUOTE_DATA_DIR):
+        return results
+    for fname in os.listdir(QUOTE_DATA_DIR):
+        path = os.path.join(QUOTE_DATA_DIR, fname)
+        try:
+            if fname.endswith(".json"):
+                with open(path) as f:
+                    data = jsonmod.load(f)
+                if isinstance(data, list):
+                    for item in data[:limit]:
+                        results.append(item)
+                elif isinstance(data, dict) and "value" in data:
+                    for item in data["value"][:limit]:
+                        results.append(item)
+            elif fname.endswith(".csv"):
+                import csv as csvmod
+                with open(path, encoding="utf-8-sig") as f:
+                    for i, row in enumerate(csvmod.DictReader(f)):
+                        if i >= limit: break
+                        results.append(row)
+        except Exception as e:
+            logger.error(f"Error reading quote file {fname}: {e}")
+    return results
+
+
 class VendorMappingRequest(BaseModel):
     source: str
     source_vendor_id: str
@@ -699,6 +870,57 @@ async def add_item_mapping(req: ItemMappingRequest):
         req.p21_item_id, req.p21_item_desc, req.p21_vendor_id, "manual",
     )
     return {"status": "saved", "mapping": req.dict()}
+
+
+# ── Customer Item Lookup (for Edit PO dropdowns) ────────────────────────────
+
+@app.get("/api/v1/lookup/customer-items/{customer_id}")
+async def lookup_customer_items(customer_id: str, q: str = "", limit: int = 50):
+    """
+    Get items this customer has ordered before, sorted by frequency.
+    Used to populate the Edit PO part number dropdown.
+    Optional q param filters by part# or description.
+    """
+    engine = _get_customer_engine()
+    items = engine.customer_items.get(customer_id, [])
+
+    if q:
+        q_upper = q.upper()
+        items = [i for i in items if
+                 q_upper in (i.get("customer_part_number", "").upper()) or
+                 q_upper in (i.get("p21_item_desc", "").upper())]
+
+    # Sort by seen_count descending
+    items.sort(key=lambda x: int(x.get("seen_count", 0)), reverse=True)
+
+    return [{
+        "customer_part_number": i.get("customer_part_number"),
+        "p21_inv_mast_uid": i.get("p21_inv_mast_uid"),
+        "p21_item_desc": i.get("p21_item_desc"),
+        "unit_of_measure": i.get("unit_of_measure"),
+        "unit_price_avg": i.get("unit_price_avg"),
+        "unit_price_last": i.get("unit_price_last"),
+        "seen_count": i.get("seen_count"),
+    } for i in items[:limit]]
+
+
+@app.get("/api/v1/lookup/customers")
+async def lookup_customers(q: str = "", limit: int = 20):
+    """Search customers by name for Edit PO customer dropdown."""
+    engine = _get_customer_engine()
+    if not q:
+        return engine.customer_xw[:limit]
+
+    q_upper = q.upper()
+    matches = [r for r in engine.customer_xw if
+               q_upper in (r.get("p21_customer_name", "").upper()) or
+               q_upper in (r.get("p21_customer_id", ""))]
+    return [{
+        "p21_customer_id": r.get("p21_customer_id"),
+        "p21_customer_name": r.get("p21_customer_name"),
+        "ship2_name": r.get("ship2_name"),
+        "ship2_zip": r.get("ship2_zip"),
+    } for r in matches[:limit]]
 
 
 # ── Quote Export ──────────────────────────────────────────────────────────────

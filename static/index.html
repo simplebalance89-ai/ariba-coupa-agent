@@ -96,6 +96,7 @@ tr:hover { background: #141620; }
   <button class="tab active" onclick="showTab('queue')">Review Queue <span class="badge" id="queueBadge">0</span></button>
   <button class="tab" onclick="showTab('upload')">Upload PO</button>
   <button class="tab" onclick="showTab('crosswalk')">Crosswalk</button>
+  <button class="tab" onclick="showTab('cism')">CISM Schema</button>
   <button class="tab" onclick="showTab('pipeline')">Pipeline</button>
 </div>
 <div class="content">
@@ -177,6 +178,32 @@ tr:hover { background: #141620; }
     <div class="scroll-table"><table id="masterTable"><tr><th>UID</th><th>Description</th><th>UOM</th><th>Product Group</th><th>Supplier</th></tr></table></div>
     <div id="masterEmpty" class="empty" style="padding:20px;">Build crosswalk to populate</div>
   </div>
+
+  <div class="xw-section">
+    <h3>Dynamics Quotes <span class="count" id="xwQuoteCount"></span></h3>
+    <p class="desc">LVP quotes from Dynamics 365 CRM. Upload quote export JSON or use the quote pull API.</p>
+    <div style="margin-bottom:12px;">
+      <input type="file" id="quoteFile" accept=".json,.csv">
+      <button class="btn btn-gray" onclick="uploadQuotes()" style="margin-left:8px;">Upload Quotes</button>
+      <span id="quoteUploadStatus" style="font-size:11px; color:#475569; margin-left:8px;"></span>
+    </div>
+    <div class="scroll-table"><table id="quoteTable"><tr><th>Quote #</th><th>Name</th><th>Status</th><th>Customer</th><th>Price</th><th>Date</th></tr></table></div>
+    <div id="quoteEmpty" class="empty" style="padding:20px;">No quote data loaded. Upload Dynamics export above.</div>
+  </div>
+</div>
+
+<!-- CISM SCHEMA -->
+<div class="tab-panel" id="panel-cism">
+  <div class="xw-section">
+    <h3>P21 Order/Quote Import — Header Schema</h3>
+    <p class="desc">These are the columns in the CISM batch import CSV that creates a Sales Order header in P21. Required fields are highlighted.</p>
+    <div class="scroll-table"><table id="cismHeaderTable"><tr><th>#</th><th>Field</th><th>Type</th><th>Req</th><th>Max</th><th>Description</th></tr></table></div>
+  </div>
+  <div class="xw-section">
+    <h3>P21 Order/Quote Import — Line Schema</h3>
+    <p class="desc">These columns create each SO line item. The Item ID must match a P21 inventory item (resolved via the customer-item crosswalk).</p>
+    <div class="scroll-table"><table id="cismLineTable"><tr><th>#</th><th>Field</th><th>Type</th><th>Req</th><th>Max</th><th>Description</th></tr></table></div>
+  </div>
 </div>
 
 <!-- PIPELINE -->
@@ -207,14 +234,6 @@ const API = '';
 let queue = [];
 let currentFilter = 'all';
 let selectedId = null;
-
-function showTab(name) {
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.getElementById('panel-' + name).classList.add('active');
-  event.target.closest('.tab')?.classList.add('active');
-  if (name === 'crosswalk') loadAllXW();
-}
 
 async function loadStats() {
   try {
@@ -313,8 +332,107 @@ async function rejectPO(id) {
   } catch(e) { alert('Error: ' + e.message); }
 }
 
-function editPO(id) {
-  alert('Edit PO — coming next. This will let you:\n\n1. Change the matched P21 customer\n2. Remap individual line items to different P21 products\n3. Edit quantities, prices, ship-to\n4. Add notes for the warehouse\n\nFor now, approve or reject from here.');
+async function editPO(id) {
+  const po = queue.find(p => p.intake_id === id);
+  if (!po) return;
+  const h = po.header || {};
+  const lines = po.lines || [];
+  const custId = h.customer_id_p21 || '';
+
+  // Load customer's item history for dropdowns
+  let custItems = [];
+  if (custId) {
+    try { custItems = await (await fetch(`${API}/api/v1/lookup/customer-items/${custId}?limit=200`)).json(); } catch(e) {}
+  }
+
+  // Build item options HTML
+  const itemOptions = custItems.map(i =>
+    `<option value="${i.p21_inv_mast_uid}" data-desc="${i.p21_item_desc||''}" data-uom="${i.unit_of_measure||'EA'}" data-price="${i.unit_price_last||''}">${i.customer_part_number} — ${(i.p21_item_desc||'').substring(0,30)} (${i.seen_count}x)</option>`
+  ).join('');
+
+  const panel = document.getElementById('detailPanel');
+  panel.innerHTML = `
+    <h2>Edit PO ${po.po_number || '?'} <span class="badge-conf ${po.confidence}">${(po.confidence||'').toUpperCase()}</span></h2>
+    <div style="color:#94a3b8; font-size:13px; margin-bottom:16px;">Edit customer mapping, line items, quantities, and pricing. Item dropdown shows this customer's order history sorted by frequency.</div>
+
+    <div class="meta-grid" style="margin-bottom:16px;">
+      <div class="meta-box">
+        <div class="lbl">P21 Customer ID</div>
+        <input id="editCustId" value="${custId}" style="width:100%; padding:6px; background:#0f1117; color:#fff; border:1px solid #2a2d3a; border-radius:4px; margin-top:4px;">
+      </div>
+      <div class="meta-box">
+        <div class="lbl">Customer Name</div>
+        <input id="editCustName" value="${h.customer_name_p21||''}" style="width:100%; padding:6px; background:#0f1117; color:#fff; border:1px solid #2a2d3a; border-radius:4px; margin-top:4px;">
+      </div>
+      <div class="meta-box">
+        <div class="lbl">Ship-To</div>
+        <input id="editShipTo" value="${h.ship2_name||''}" style="width:100%; padding:6px; background:#0f1117; color:#fff; border:1px solid #2a2d3a; border-radius:4px; margin-top:4px;">
+      </div>
+    </div>
+
+    <h3 style="margin:12px 0 8px;">Line Items — <span style="color:#64748b; font-size:12px;">${custItems.length} items in this customer's history</span></h3>
+    <table>
+      <tr><th>#</th><th>Item (from customer history)</th><th>Description</th><th>Qty</th><th>Price</th><th>UOM</th></tr>
+      ${lines.map((l,i) => `<tr>
+        <td>${l.line_no || i+1}</td>
+        <td><select id="editItem_${i}" onchange="fillItemDetails(${i})" style="width:100%; padding:4px; background:#0f1117; color:#fff; border:1px solid #2a2d3a; border-radius:4px; max-width:300px;">
+          <option value="${l.item_id_p21||''}">${l.supplier_part_id||'Select item...'} ${l.item_id_p21 ? '(UID:'+l.item_id_p21+')' : ''}</option>
+          ${itemOptions}
+        </select></td>
+        <td><input id="editDesc_${i}" value="${(l.item_description||'').substring(0,40)}" style="width:100%; padding:4px; background:#0f1117; color:#fff; border:1px solid #2a2d3a; border-radius:4px;"></td>
+        <td><input id="editQty_${i}" type="number" value="${l.qty_ordered||0}" style="width:70px; padding:4px; background:#0f1117; color:#fff; border:1px solid #2a2d3a; border-radius:4px;"></td>
+        <td><input id="editPrice_${i}" type="number" step="0.01" value="${(l.unit_price||0).toFixed?.(2)||'0'}" style="width:90px; padding:4px; background:#0f1117; color:#fff; border:1px solid #2a2d3a; border-radius:4px;"></td>
+        <td><input id="editUom_${i}" value="${l.unit_of_measure||'EA'}" style="width:60px; padding:4px; background:#0f1117; color:#fff; border:1px solid #2a2d3a; border-radius:4px;"></td>
+      </tr>`).join('')}
+    </table>
+
+    <div style="margin-top:12px;">
+      <label style="font-size:11px; color:#64748b; text-transform:uppercase;">Notes</label><br>
+      <textarea id="editNotes" rows="2" style="width:100%; padding:8px; background:#0f1117; color:#fff; border:1px solid #2a2d3a; border-radius:4px; margin-top:4px;" placeholder="Notes for warehouse, special instructions..."></textarea>
+    </div>
+
+    <div class="action-bar">
+      <button class="btn btn-green" onclick="saveEditPO('${po.intake_id}', ${lines.length})">Save Changes</button>
+      <button class="btn btn-gray" onclick="selectPO('${po.intake_id}')">Cancel</button>
+    </div>
+  `;
+}
+
+function fillItemDetails(lineIdx) {
+  const sel = document.getElementById('editItem_' + lineIdx);
+  const opt = sel.options[sel.selectedIndex];
+  if (opt.dataset.desc) document.getElementById('editDesc_' + lineIdx).value = opt.dataset.desc;
+  if (opt.dataset.uom) document.getElementById('editUom_' + lineIdx).value = opt.dataset.uom;
+  if (opt.dataset.price) document.getElementById('editPrice_' + lineIdx).value = opt.dataset.price;
+}
+
+async function saveEditPO(id, lineCount) {
+  const po = queue.find(p => p.intake_id === id);
+  const lines = (po?.lines || []).map((l, i) => ({
+    line_no: l.line_no || i+1,
+    item_id_p21: document.getElementById('editItem_' + i)?.value || '',
+    item_description: document.getElementById('editDesc_' + i)?.value || '',
+    qty_ordered: parseFloat(document.getElementById('editQty_' + i)?.value || 0),
+    unit_price: parseFloat(document.getElementById('editPrice_' + i)?.value || 0),
+    unit_of_measure: document.getElementById('editUom_' + i)?.value || 'EA',
+  }));
+
+  try {
+    const r = await fetch(`${API}/api/v1/review/po/${id}/edit`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        customer_id_p21: document.getElementById('editCustId')?.value || '',
+        customer_name_p21: document.getElementById('editCustName')?.value || '',
+        ship2_name: document.getElementById('editShipTo')?.value || '',
+        lines: lines,
+        notes: document.getElementById('editNotes')?.value || '',
+      })
+    });
+    if (!r.ok) throw new Error('Save failed');
+    alert('PO updated! Reload queue to see changes.');
+    loadQueue(currentFilter);
+  } catch(e) { alert('Error: ' + e.message); }
 }
 
 function filterQ(f) {
@@ -438,6 +556,61 @@ async function uploadAndBuildXW() {
     }
   } catch(e) { result.innerHTML = `<div style="background:#3b1111; border:1px solid #991b1b; border-radius:8px; padding:16px; color:#f87171;">Error: ${e.message}</div>`; }
   finally { btn.disabled = false; btn.textContent = 'Upload & Build Crosswalk'; }
+}
+
+// CISM Schema loader
+async function loadCismSchema() {
+  try {
+    const data = await (await fetch(`${API}/api/v1/cism/schema`)).json();
+    const hdrTbl = document.getElementById('cismHeaderTable');
+    const linTbl = document.getElementById('cismLineTable');
+    hdrTbl.innerHTML = '<tr><th>#</th><th>Field</th><th>Type</th><th>Req</th><th>Max</th><th>Description</th></tr>' +
+      data.header.map((f,i) => `<tr style="${f.required?'background:#0d1f2d;':''}"><td>${i+1}</td><td style="font-weight:${f.required?'600':'400'};color:${f.required?'#60a5fa':'#e0e0e0'}">${f.field}</td><td>${f.type}</td><td>${f.required?'<span style="color:#4ade80;">YES</span>':''}</td><td>${f.max_len||''}</td><td style="color:#94a3b8;">${f.desc}</td></tr>`).join('');
+    linTbl.innerHTML = '<tr><th>#</th><th>Field</th><th>Type</th><th>Req</th><th>Max</th><th>Description</th></tr>' +
+      data.line.map((f,i) => `<tr style="${f.required?'background:#0d1f2d;':''}"><td>${i+1}</td><td style="font-weight:${f.required?'600':'400'};color:${f.required?'#60a5fa':'#e0e0e0'}">${f.field}</td><td>${f.type}</td><td>${f.required?'<span style="color:#4ade80;">YES</span>':''}</td><td>${f.max_len||''}</td><td style="color:#94a3b8;">${f.desc}</td></tr>`).join('');
+  } catch(e) { console.error('CISM schema:', e); }
+}
+
+// Dynamics Quotes
+async function uploadQuotes() {
+  const fi = document.getElementById('quoteFile');
+  if (!fi.files.length) { alert('Select a quote file'); return; }
+  const fd = new FormData(); fd.append('file', fi.files[0]);
+  try {
+    const d = await (await fetch(`${API}/api/v1/crosswalk/upload-quotes`, {method:'POST', body:fd})).json();
+    document.getElementById('quoteUploadStatus').textContent = `Uploaded ${d.file} (${(d.size/1024).toFixed(0)} KB)`;
+    loadQuotes();
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+async function loadQuotes() {
+  try {
+    const data = await (await fetch(`${API}/api/v1/crosswalk/quotes?limit=50`)).json();
+    const tbl = document.getElementById('quoteTable');
+    const empty = document.getElementById('quoteEmpty');
+    document.getElementById('xwQuoteCount').textContent = data.length ? `(${data.length}+ entries)` : '';
+    if (data.length) {
+      empty.style.display='none'; tbl.style.display='table';
+      tbl.innerHTML = '<tr><th>Quote #</th><th>Name</th><th>Status</th><th>Customer</th><th>Price</th><th>Date</th></tr>' +
+        data.map(r => `<tr>
+          <td>${r.lvp_quotenumber||r.quote_number||''}</td>
+          <td>${(r.lvp_name||r.name||'').substring(0,35)}</td>
+          <td>${r.lvp_quotestatusname||r.status_name||r.status||''}</td>
+          <td>${r['_lvp_customer_value@OData.Community.Display.V1.FormattedValue']||r.customer_name||r.customer_id||''}</td>
+          <td>${r.lvp_extendedprice||r.extended_price||''}</td>
+          <td>${(r.createdon||r.created_date||'').substring(0,10)}</td>
+        </tr>`).join('');
+    } else { empty.style.display='block'; tbl.style.display='none'; }
+  } catch(e) { console.error(e); }
+}
+
+function showTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  event.target.closest('.tab')?.classList.add('active');
+  if (name === 'crosswalk') { loadAllXW(); loadQuotes(); }
+  if (name === 'cism') loadCismSchema();
 }
 
 loadStats(); loadQueue('all');
