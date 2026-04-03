@@ -56,6 +56,7 @@ from services.processing.confidence_scorer import score_customer_po
 from services.processing.cism_so_generator import generate_cism_so
 from services.processing.crosswalk_learner import learn_from_approval
 from services.processing import local_store
+from services.processing.cism_batch import add_to_batch, get_batch_status, clear_batch
 
 settings = get_settings()
 
@@ -682,7 +683,20 @@ async def approve_po(intake_id: str, req: ApproveRequest):
         except Exception as e:
             logger.error(f"Learning loop error: {e}")
 
-    return {"status": "approved", "intake_id": intake_id}
+    # Add to CISM batch
+    try:
+        updated_po = local_store.get_po(intake_id)
+        add_to_batch(updated_po)
+    except Exception as e:
+        logger.error(f"CISM batch error: {e}")
+
+    batch = get_batch_status()
+    return {
+        "status": "approved",
+        "intake_id": intake_id,
+        "batch_headers": batch["header_count"],
+        "batch_lines": batch["line_count"],
+    }
 
 
 class RejectRequest(BaseModel):
@@ -803,6 +817,35 @@ async def edit_po(intake_id: str, req: EditPORequest):
         "reason": new_conf.reason,
         "review_required": new_conf.review_required,
     }
+
+
+# ── CISM Batch Endpoints ────────────────────────────────────────────────────
+
+@app.get("/api/v1/cism/batch")
+async def cism_batch_status():
+    """Get current CISM batch contents — the accumulated approved POs."""
+    return get_batch_status()
+
+
+@app.get("/api/v1/cism/batch/download/{file_type}")
+async def download_batch(file_type: str):
+    """Download the batch header or lines CSV."""
+    batch = get_batch_status()
+    if file_type == "header":
+        path = batch["header_file"]
+    elif file_type == "lines":
+        path = batch["lines_file"]
+    else:
+        raise HTTPException(400, "file_type must be 'header' or 'lines'")
+    if not os.path.exists(path) or os.path.getsize(path) == 0:
+        raise HTTPException(404, "Batch file empty — approve POs first")
+    return FileResponse(path, media_type="text/csv", filename=os.path.basename(path))
+
+
+@app.post("/api/v1/cism/batch/clear")
+async def clear_cism_batch():
+    """Clear the batch after uploading to Azure. Archives the files."""
+    return clear_batch()
 
 
 # ── CISM Schema Reference ───────────────────────────────────────────────────

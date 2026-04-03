@@ -95,6 +95,7 @@ tr:hover { background: #141620; }
 <div class="tabs">
   <button class="tab active" onclick="showTab('queue')">Review Queue <span class="badge" id="queueBadge">0</span></button>
   <button class="tab" onclick="showTab('processed')">Processed <span class="badge" id="procBadge">0</span></button>
+  <button class="tab" onclick="showTab('batch')">CISM Batch <span class="badge" id="batchBadge">0</span></button>
   <button class="tab" onclick="showTab('upload')">Upload PO</button>
   <button class="tab" onclick="showTab('crosswalk')">Crosswalk</button>
   <button class="tab" onclick="showTab('cism')">CISM Schema</button>
@@ -144,6 +145,61 @@ tr:hover { background: #141620; }
       </table>
     </div>
     <div id="allPOsEmpty" class="empty" style="padding:20px;">Loading...</div>
+  </div>
+</div>
+
+<!-- CISM BATCH -->
+<div class="tab-panel" id="panel-batch">
+  <div class="xw-section">
+    <h3>CISM Batch Pipeline</h3>
+    <p class="desc">As POs are approved, they accumulate into a single CISM batch file. When ready, download and push to Azure Blob for P21 import.</p>
+    <div style="display:flex; gap:16px; margin:16px 0; padding:16px; background:#141620; border-radius:8px; align-items:center;">
+      <div style="text-align:center; flex:1;">
+        <div style="font-size:11px;color:#64748b;text-transform:uppercase;">1. Review & Approve</div>
+        <div style="font-size:24px;font-weight:700;color:#4ade80;" id="batchApproved">0</div>
+        <div style="font-size:11px;color:#475569;">POs in batch</div>
+      </div>
+      <div style="font-size:24px;color:#334155;">→</div>
+      <div style="text-align:center; flex:1;">
+        <div style="font-size:11px;color:#64748b;text-transform:uppercase;">2. CISM Batch CSV</div>
+        <div style="font-size:24px;font-weight:700;color:#60a5fa;" id="batchLines">0</div>
+        <div style="font-size:11px;color:#475569;">line items</div>
+      </div>
+      <div style="font-size:24px;color:#334155;">→</div>
+      <div style="text-align:center; flex:1;">
+        <div style="font-size:11px;color:#64748b;text-transform:uppercase;">3. Azure Blob</div>
+        <div style="font-size:12px;color:#475569;margin-top:4px;">Upload batch to<br>Azure storage</div>
+      </div>
+      <div style="font-size:24px;color:#334155;">→</div>
+      <div style="text-align:center; flex:1;">
+        <div style="font-size:11px;color:#64748b;text-transform:uppercase;">4. Local Machine</div>
+        <div style="font-size:12px;color:#475569;margin-top:4px;">Sync to<br>P21 CISM folder</div>
+      </div>
+      <div style="font-size:24px;color:#334155;">→</div>
+      <div style="text-align:center; flex:1;">
+        <div style="font-size:11px;color:#64748b;text-transform:uppercase;">5. P21 Import</div>
+        <div style="font-size:12px;color:#475569;margin-top:4px;">CISM scheduled<br>job creates SOs</div>
+      </div>
+    </div>
+    <div style="display:flex; gap:8px; margin-bottom:16px;">
+      <a id="dlBatchHeader" class="btn btn-green" style="text-decoration:none;">Download Header CSV</a>
+      <a id="dlBatchLines" class="btn btn-green" style="text-decoration:none;">Download Lines CSV</a>
+      <button class="btn btn-red" onclick="clearBatch()">Clear Batch (after Azure upload)</button>
+    </div>
+  </div>
+
+  <div class="xw-section">
+    <h3>Batch Header — orderquoteheader</h3>
+    <p class="desc">One row per approved PO. This is the file P21's CISM import reads for SO headers.</p>
+    <div class="scroll-table"><table id="batchHeaderTable"><tr><th>Import Set</th><th>Customer ID</th><th>Customer</th><th>PO #</th><th>Ship-To</th><th>City</th><th>St</th><th>Zip</th><th>Date</th></tr></table></div>
+    <div id="batchHeaderEmpty" class="empty" style="padding:20px;">Batch is empty. Approve POs from the Review Queue to build the batch.</div>
+  </div>
+
+  <div class="xw-section">
+    <h3>Batch Lines — orderquoteline</h3>
+    <p class="desc">One row per line item. Each links to its header via Import Set Number.</p>
+    <div class="scroll-table"><table id="batchLineTable"><tr><th>Import Set</th><th>Line</th><th>Item ID</th><th>Qty</th><th>UOM</th><th>Price</th><th>Description</th><th>Disposition</th></tr></table></div>
+    <div id="batchLineEmpty" class="empty" style="padding:20px;">No lines yet.</div>
   </div>
 </div>
 
@@ -330,7 +386,8 @@ async function approvePO(id) {
   if (!reviewer) return;
   try {
     await fetch(`${API}/api/v1/review/po/${id}/approve`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({reviewer, notes:''}) });
-    alert('Approved! Learning loop saved mappings. CISM SO file generated.');
+    const ar = await r.json();
+    alert(`Approved! Added to CISM batch.\n\nBatch now has ${ar.batch_headers||'?'} POs, ${ar.batch_lines||'?'} lines.\nGo to CISM Batch tab to see the file.`);
     loadQueue(currentFilter); loadStats();
     selectedId = null;
     document.getElementById('detailPanel').innerHTML = '<div class="empty">Select a PO from the queue to review</div>';
@@ -677,7 +734,7 @@ async function loadProcessed() {
     if (all.length) {
       allEmpty.style.display='none'; allTbl.style.display='table';
       allTbl.innerHTML = '<tr><th>PO #</th><th>Customer</th><th>Source</th><th>Conf</th><th>Status</th><th>Lines</th><th>Received</th></tr>' +
-        all.map(r => `<tr>
+        all.map(r => `<tr onclick="viewPO('${r.intake_id}')" style="cursor:pointer;">
           <td style="font-weight:600;">${r.po_number||''}</td>
           <td>${r.customer_p21||''}</td>
           <td>${r.source||''}</td>
@@ -690,6 +747,109 @@ async function loadProcessed() {
   } catch(e) { console.error('Processed:', e); }
 }
 
+// CISM Batch tab
+async function loadBatch() {
+  try {
+    const data = await (await fetch(`${API}/api/v1/cism/batch`)).json();
+    document.getElementById('batchApproved').textContent = data.header_count || 0;
+    document.getElementById('batchLines').textContent = data.line_count || 0;
+    document.getElementById('batchBadge').textContent = data.header_count || 0;
+
+    // Download links
+    document.getElementById('dlBatchHeader').href = data.header_count ? `${API}/api/v1/cism/batch/download/header` : '#';
+    document.getElementById('dlBatchLines').href = data.line_count ? `${API}/api/v1/cism/batch/download/lines` : '#';
+
+    // Header table
+    const hTbl = document.getElementById('batchHeaderTable');
+    const hEmpty = document.getElementById('batchHeaderEmpty');
+    if (data.headers?.length) {
+      hEmpty.style.display='none'; hTbl.style.display='table';
+      hTbl.innerHTML = '<tr><th>Import Set</th><th>Customer ID</th><th>Customer</th><th>PO #</th><th>Ship-To</th><th>City</th><th>St</th><th>Zip</th><th>Date</th><th>Approved</th></tr>' +
+        data.headers.map(r => `<tr>
+          <td style="font-family:monospace;font-size:11px;">${r['Import Set No']||''}</td>
+          <td>${r['Customer ID']||''}</td>
+          <td style="font-weight:600;">${r['Customer Name']||''}</td>
+          <td style="color:#60a5fa;">${r['Customer PO Number']||''}</td>
+          <td>${r['Ship To Name']||''}</td>
+          <td>${r['Ship To City']||''}</td>
+          <td>${r['Ship To State']||''}</td>
+          <td>${r['Ship To Zip Code']||''}</td>
+          <td>${r['Order Date']||''}</td>
+          <td style="color:#4ade80;">${r['Approved']||''}</td>
+        </tr>`).join('');
+    } else { hEmpty.style.display='block'; hTbl.style.display='none'; }
+
+    // Lines table
+    const lTbl = document.getElementById('batchLineTable');
+    const lEmpty = document.getElementById('batchLineEmpty');
+    if (data.lines?.length) {
+      lEmpty.style.display='none'; lTbl.style.display='table';
+      lTbl.innerHTML = '<tr><th>Import Set</th><th>Line</th><th>Item ID</th><th>Qty</th><th>UOM</th><th>Price</th><th>Description</th><th>Disp</th></tr>' +
+        data.lines.map(r => `<tr>
+          <td style="font-family:monospace;font-size:11px;">${r['Import Set Number']||''}</td>
+          <td>${r['Line No']||''}</td>
+          <td style="font-weight:600;color:#60a5fa;">${r['Item ID']||''}</td>
+          <td>${r['Unit Quantity']||''}</td>
+          <td>${r['Unit of Measure']||''}</td>
+          <td>$${r['Unit Price']||'0'}</td>
+          <td>${(r['Item Description']||'').substring(0,35)}</td>
+          <td>${r['Disposition']||''}</td>
+        </tr>`).join('');
+    } else { lEmpty.style.display='block'; lTbl.style.display='none'; }
+  } catch(e) { console.error('Batch:', e); }
+}
+
+async function clearBatch() {
+  if (!confirm('Clear the batch? This archives the files and starts fresh. Only do this AFTER uploading to Azure Blob.')) return;
+  try {
+    await fetch(`${API}/api/v1/cism/batch/clear`, {method:'POST'});
+    alert('Batch cleared and archived.');
+    loadBatch();
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+// Make All POs clickable
+async function viewPO(intakeId) {
+  try {
+    const po = await (await fetch(`${API}/api/v1/review/po/${intakeId}`)).json();
+    const h = po.header || {};
+    const lines = po.lines || [];
+    const panel = document.querySelector('#panel-processed');
+    // Scroll to top and show detail
+    const detailHtml = `
+      <div class="xw-section" id="poDetailOverlay" style="border:2px solid #3b82f6;margin-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <h3>PO ${po.po_no||'?'} <span class="badge-conf ${po.confidence}">${(po.confidence||'').toUpperCase()}</span> <span style="color:${po.review_status==='approved'?'#4ade80':'#fbbf24'};font-weight:600;">${(po.review_status||'').toUpperCase()}</span></h3>
+          <button class="btn btn-gray" onclick="document.getElementById('poDetailOverlay').remove()" style="padding:4px 12px;">Close</button>
+        </div>
+        <div style="color:#94a3b8;font-size:13px;margin:8px 0;">${po.reason||''}</div>
+        <div class="meta-grid">
+          <div class="meta-box"><div class="lbl">Customer</div><div class="val">${h.customer_name_p21||''} (${h.customer_id_p21||''})</div></div>
+          <div class="meta-box"><div class="lbl">Ship-To</div><div class="val">${h.ship2_name||''}, ${h.ship2_city||''} ${h.ship2_state||''} ${h.ship2_zip||''}</div></div>
+          <div class="meta-box"><div class="lbl">Source / Match</div><div class="val">${po.source||''} | ${h.customer_match_method||''} (${(h.customer_match_score||0).toFixed?.(2)||'0'})</div></div>
+        </div>
+        <table>
+          <tr><th>#</th><th>Part #</th><th>Description</th><th>Qty</th><th>Price</th><th>P21 Item</th><th>Match</th></tr>
+          ${lines.map((l,i) => `<tr>
+            <td>${l.line_no||i+1}</td>
+            <td>${l.supplier_part_id||''}</td>
+            <td>${(l.item_description||'').substring(0,35)}</td>
+            <td>${l.qty_ordered||0}</td>
+            <td>$${(l.unit_price||0).toFixed?.(2)||'0'}</td>
+            <td>${l.item_id_p21||'<span style="color:#f87171">-</span>'}</td>
+            <td><span class="score-pill ${(l.crosswalk_match_score||0)>=0.9?'hi':(l.crosswalk_match_score||0)>=0.6?'mid':'lo'}">${((l.crosswalk_match_score||0)*100).toFixed(0)}%</span></td>
+          </tr>`).join('')}
+        </table>
+        ${po.cism ? `<div style="margin-top:8px;font-size:12px;color:#475569;">CISM: ${po.cism.import_set_no} | <a href="${API}/api/v1/cism/download/${po.intake_id}/header" style="color:#60a5fa;">Header</a> | <a href="${API}/api/v1/cism/download/${po.intake_id}/lines" style="color:#60a5fa;">Lines</a></div>` : ''}
+      </div>`;
+    // Remove old overlay if exists
+    const old = document.getElementById('poDetailOverlay');
+    if (old) old.remove();
+    panel.insertAdjacentHTML('afterbegin', detailHtml);
+    panel.scrollTop = 0;
+  } catch(e) { alert('Error loading PO: ' + e.message); }
+}
+
 function showTab(name) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -698,6 +858,7 @@ function showTab(name) {
   if (name === 'crosswalk') { loadAllXW(); loadQuotes(); }
   if (name === 'cism') loadCismSchema();
   if (name === 'processed') loadProcessed();
+  if (name === 'batch') loadBatch();
 }
 
 loadStats(); loadQueue('all');
