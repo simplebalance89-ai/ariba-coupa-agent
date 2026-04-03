@@ -50,7 +50,7 @@ from services.processing.duplicate_detector import (
 from cism_generator import generate_cism_file
 from services.processing.blob_uploader import upload_approved_cism, upload_rejected_cism
 from services.processing.quote_exporter import export_quotes_to_blob
-from services.processing.so_exporter import export_so_data
+from services.processing.so_exporter import export as export_so_data
 from services.processing.customer_crosswalk_engine import CustomerCrosswalkEngine
 from services.processing.confidence_scorer import score_customer_po
 from services.processing.cism_so_generator import generate_cism_so
