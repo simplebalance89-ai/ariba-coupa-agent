@@ -13,7 +13,7 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-STORE_DIR = os.environ.get("PO_STORE_DIR", "./po_store")
+STORE_DIR = os.environ.get("PO_STORE_DIR", "/app/data/po_store")
 
 
 def _ensure_dir():

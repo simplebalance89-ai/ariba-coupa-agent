@@ -62,12 +62,12 @@ class Settings(BaseSettings):
     p21_company_no: int = 1
     p21_location_id: int = 10
 
-    # ── CISM Output ──
-    cism_output_dir: str = "./cism_output"
-    cism_so_output_dir: str = "./cism_so_output"
+    # ── CISM Output (persistent disk on Render) ──
+    cism_output_dir: str = "/app/data/cism_output"
+    cism_so_output_dir: str = "/app/data/cism_so_output"
 
-    # ── Crosswalk CSVs ──
-    crosswalk_dir: str = "./crosswalks"
+    # ── Crosswalk CSVs (persistent disk on Render) ──
+    crosswalk_dir: str = "/app/data/crosswalks"
 
     class Config:
         env_file = ".env"

@@ -819,7 +819,7 @@ async def cism_schema():
 
 # ── Quote Crosswalk (Dynamics) ──────────────────────────────────────────────
 
-QUOTE_DATA_DIR = "./quote_data"
+QUOTE_DATA_DIR = "/app/data/quote_data"
 
 @app.post("/api/v1/crosswalk/upload-quotes")
 async def upload_quote_data(file: UploadFile = File(...)):
@@ -1002,7 +1002,7 @@ async def quotes_status():
 
 # ── Crosswalk Build ─────────────────────────────────────────────────────────
 
-P21_DATA_DIR = "./p21_data"
+P21_DATA_DIR = "/app/data/p21_data"
 
 @app.post("/api/v1/crosswalk/upload")
 async def upload_p21_csv(

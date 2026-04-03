@@ -19,8 +19,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Create directories for CISM output
-RUN mkdir -p /app/cism_output /app/cism_so_output /app/cism_archive /app/crosswalks /app/logs /app/test_data
+# Create directories — /app/data is the Render persistent disk mount point
+RUN mkdir -p /app/data/cism_output /app/data/cism_so_output /app/data/crosswalks \
+    /app/data/po_store /app/data/p21_data /app/data/quote_data /app/logs /app/test_data
 
 # Expose port
 EXPOSE 8000
