@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE cXML SYSTEM "http://xml.cxml.org/schemas/cXML/1.2.069/cXML.dtd">
+<cXML payloadID="sample-SDI-PO-88712@test" timestamp="2026-04-03T12:00:00-05:00" version="1.2.069">
+  <Header>
+    <From><Credential domain="TestNetwork"><Identity>TEST-SDI-PO-88712</Identity></Credential></From>
+    <To><Correspondent><Contact><Name>EnPro Industries</Name><Email>orders@enproinc.com</Email></Contact></Correspondent></To>
+    <Sender><Credential domain="TestNetwork"><Identity>TEST-SENDER</Identity></Credential></Sender>
+  </Header>
+  <Request>
+    <OrderRequest>
+      <OrderRequestHeader orderID="SDI-PO-88712" orderDate="2026-04-03" orderType="regular">
+        <Total><Money currency="USD">8557.50</Money></Total>
+        <ShipTo>
+          <Address>
+            <Name>Steel Dynamics, Inc.</Name>
+            <PostalAddress>
+              <Street>7575 W Jefferson Blvd</Street>
+              <City>Fort Wayne</City>
+              <State>IN</State>
+              <PostalCode>46804</PostalCode>
+              <Country isoCountryCode="US">United States</Country>
+            </PostalAddress>
+          </Address>
+        </ShipTo>
+        <Contact role="purchasingAgent">
+          <Name>Karen Lee</Name>
+          <Email>klee@steeldynamics.com</Email>
+        </Contact>
+        <Comments>Sample PO for testing</Comments>
+      </OrderRequestHeader>
+      <ItemOut lineNumber="1" quantity="100" requestedDeliveryDate="2026-04-15">
+        <ItemID><SupplierPartID>T10540036</SupplierPartID></ItemID>
+        <ItemDetail>
+          <UnitPrice><Money currency="USD">73.21</Money></UnitPrice>
+          <Description>Pall Replacement Cartridge</Description>
+          <UnitOfMeasure>EA</UnitOfMeasure>
+        </ItemDetail>
+      </ItemOut>
+      <ItemOut lineNumber="2" quantity="50" requestedDeliveryDate="2026-04-15">
+        <ItemID><SupplierPartID>490.646.1Y.BC</SupplierPartID></ItemID>
+        <ItemDetail>
+          <UnitPrice><Money currency="USD">24.73</Money></UnitPrice>
+          <Description>Lechler Nozzle Brass</Description>
+          <UnitOfMeasure>EA</UnitOfMeasure>
+        </ItemDetail>
+      </ItemOut>
+    </OrderRequest>
+  </Request>
+</cXML>

@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE cXML SYSTEM "http://xml.cxml.org/schemas/cXML/1.2.069/cXML.dtd">
+<cXML payloadID="sample-XCEL-CC-2026-0403@test" timestamp="2026-04-03T12:00:00-05:00" version="1.2.069">
+  <Header>
+    <From><Credential domain="TestNetwork"><Identity>TEST-XCEL-CC-2026-0403</Identity></Credential></From>
+    <To><Correspondent><Contact><Name>EnPro Industries</Name><Email>orders@enproinc.com</Email></Contact></Correspondent></To>
+    <Sender><Credential domain="TestNetwork"><Identity>TEST-SENDER</Identity></Credential></Sender>
+  </Header>
+  <Request>
+    <OrderRequest>
+      <OrderRequestHeader orderID="XCEL-CC-2026-0403" orderDate="2026-04-03" orderType="regular">
+        <Total><Money currency="USD">7158.24</Money></Total>
+        <ShipTo>
+          <Address>
+            <Name>Xcel Energy</Name>
+            <PostalAddress>
+              <Street>13999 Industrial Blvd</Street>
+              <City>Becker</City>
+              <State>MN</State>
+              <PostalCode>55308-8800</PostalCode>
+              <Country isoCountryCode="US">United States</Country>
+            </PostalAddress>
+          </Address>
+        </ShipTo>
+        <Contact role="purchasingAgent">
+          <Name>Hailey Horvath</Name>
+          <Email>hhorvath@xcelenergy.com</Email>
+        </Contact>
+        <Comments>Sample PO for testing</Comments>
+      </OrderRequestHeader>
+      <ItemOut lineNumber="1" quantity="12" requestedDeliveryDate="2026-04-15">
+        <ItemID><SupplierPartID>9000238</SupplierPartID></ItemID>
+        <ItemDetail>
+          <UnitPrice><Money currency="USD">96.52</Money></UnitPrice>
+          <Description>Pall Seal Kit</Description>
+          <UnitOfMeasure>EA</UnitOfMeasure>
+        </ItemDetail>
+      </ItemOut>
+      <ItemOut lineNumber="2" quantity="2" requestedDeliveryDate="2026-04-15">
+        <ItemID><SupplierPartID>TURBINE-BEARING-X9</SupplierPartID></ItemID>
+        <ItemDetail>
+          <UnitPrice><Money currency="USD">1250.00</Money></UnitPrice>
+          <Description>Turbine Bearing Assembly</Description>
+          <UnitOfMeasure>EA</UnitOfMeasure>
+        </ItemDetail>
+      </ItemOut>
+      <ItemOut lineNumber="3" quantity="4" requestedDeliveryDate="2026-04-15">
+        <ItemID><SupplierPartID>GENERATOR-FILTER-Z3</SupplierPartID></ItemID>
+        <ItemDetail>
+          <UnitPrice><Money currency="USD">875.00</Money></UnitPrice>
+          <Description>Generator Air Filter Custom</Description>
+          <UnitOfMeasure>EA</UnitOfMeasure>
+        </ItemDetail>
+      </ItemOut>
+    </OrderRequest>
+  </Request>
+</cXML>

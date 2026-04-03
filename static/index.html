@@ -262,7 +262,8 @@ function renderQueue() {
   el.innerHTML = queue.map(po => `
     <div class="po-item ${selectedId === po.intake_id ? 'selected' : ''}" onclick="selectPO('${po.intake_id}')">
       <div><span class="dot ${po.confidence}"></span><span class="po-num">${po.po_number || 'Unknown'}</span></div>
-      <div class="po-meta">${po.source || ''} | ${po.customer_p21 || po.ship_to || 'Unknown customer'} | ${po.received ? new Date(po.received).toLocaleDateString() : ''}</div>
+      <div class="po-meta"><span style="text-transform:uppercase;font-size:10px;background:${po.source==='ariba'?'#1e3a5f':po.source==='coupa'?'#2d1b69':'#334155'};padding:1px 6px;border-radius:3px;margin-right:4px;">${po.source||'?'}</span>${po.customer_p21 || po.ship_to || 'Unknown customer'}</div>
+      <div style="font-size:11px;color:${po.confidence==='red'?'#f87171':po.confidence==='yellow'?'#fbbf24':'#4ade80'};margin-top:2px;">${po.reason || ''}</div>
     </div>
   `).join('');
 }
@@ -430,8 +431,11 @@ async function saveEditPO(id, lineCount) {
       })
     });
     if (!r.ok) throw new Error('Save failed');
-    alert('PO updated! Reload queue to see changes.');
-    loadQueue(currentFilter);
+    const result = await r.json();
+    const newConf = result.new_confidence || '?';
+    const reason = result.reason || '';
+    alert(`PO updated and re-scored!\n\nNew confidence: ${newConf.toUpperCase()}\n${reason}\n\n${newConf === 'green' ? 'Auto-approved! CISM SO ready.' : 'Still needs review.'}`);
+    loadQueue(currentFilter); loadStats();
   } catch(e) { alert('Error: ' + e.message); }
 }
 
@@ -489,8 +493,8 @@ async function loadItemXW() {
     document.getElementById('xwItemCount').textContent = `(${data.length}+ entries)`;
     if (data.length) {
       empty.style.display='none'; tbl.style.display='table';
-      tbl.innerHTML = '<tr><th>Customer</th><th>Part #</th><th>P21 UID</th><th>Description</th><th>UOM</th><th>Avg $</th><th>Orders</th></tr>' +
-        data.map(r => `<tr><td>${r.p21_customer_id||''}</td><td>${r.customer_part_number||''}</td><td>${r.p21_inv_mast_uid||''}</td><td>${(r.p21_item_desc||'').substring(0,30)}</td><td>${r.unit_of_measure||''}</td><td>${r.unit_price_avg||''}</td><td>${r.seen_count||''}</td></tr>`).join('');
+      tbl.innerHTML = '<tr><th>Customer</th><th>Customer Part #</th><th>P21 Item UID</th><th>Item Description</th><th>UOM</th><th>Avg $</th><th>Orders</th></tr>' +
+        data.map(r => `<tr><td>${r.customer_name||r.p21_customer_id||''}<br><span style="font-size:10px;color:#475569;">ID: ${r.p21_customer_id||''}</span></td><td style="font-weight:600;color:#60a5fa;">${r.customer_part_number||''}</td><td>${r.p21_inv_mast_uid||''}</td><td>${(r.p21_item_desc||'').substring(0,35)}</td><td>${r.unit_of_measure||''}</td><td>${r.unit_price_avg ? '$'+parseFloat(r.unit_price_avg).toFixed(2) : ''}</td><td>${r.seen_count||''}</td></tr>`).join('');
     } else { empty.style.display='block'; tbl.style.display='none'; }
   } catch(e) { console.error(e); }
 }

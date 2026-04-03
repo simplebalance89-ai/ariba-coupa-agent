@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE cXML SYSTEM "http://xml.cxml.org/schemas/cXML/1.2.069/cXML.dtd">
+<cXML payloadID="sample-NS-2026-04-001@test" timestamp="2026-04-03T12:00:00-05:00" version="1.2.069">
+  <Header>
+    <From><Credential domain="TestNetwork"><Identity>TEST-NS-2026-04-001</Identity></Credential></From>
+    <To><Correspondent><Contact><Name>EnPro Industries</Name><Email>orders@enproinc.com</Email></Contact></Correspondent></To>
+    <Sender><Credential domain="TestNetwork"><Identity>TEST-SENDER</Identity></Credential></Sender>
+  </Header>
+  <Request>
+    <OrderRequest>
+      <OrderRequestHeader orderID="NS-2026-04-001" orderDate="2026-04-03" orderType="regular">
+        <Total><Money currency="USD">4542.48</Money></Total>
+        <ShipTo>
+          <Address>
+            <Name>Nucor Steel</Name>
+            <PostalAddress>
+              <Street>2100 Roanoke Ave</Street>
+              <City>Berkeley</City>
+              <State>SC</State>
+              <PostalCode>29440</PostalCode>
+              <Country isoCountryCode="US">United States</Country>
+            </PostalAddress>
+          </Address>
+        </ShipTo>
+        <Contact role="purchasingAgent">
+          <Name>Jim Torres</Name>
+          <Email>jtorres@nucor.com</Email>
+        </Contact>
+        <Comments>Sample PO for testing</Comments>
+      </OrderRequestHeader>
+      <ItemOut lineNumber="1" quantity="12" requestedDeliveryDate="2026-04-15">
+        <ItemID><SupplierPartID>PH0260</SupplierPartID></ItemID>
+        <ItemDetail>
+          <UnitPrice><Money currency="USD">185.50</Money></UnitPrice>
+          <Description>Pall Filter Element HP</Description>
+          <UnitOfMeasure>EA</UnitOfMeasure>
+        </ItemDetail>
+      </ItemOut>
+      <ItemOut lineNumber="2" quantity="24" requestedDeliveryDate="2026-04-15">
+        <ItemID><SupplierPartID>9000238</SupplierPartID></ItemID>
+        <ItemDetail>
+          <UnitPrice><Money currency="USD">96.52</Money></UnitPrice>
+          <Description>Pall Seal Kit Standard</Description>
+          <UnitOfMeasure>EA</UnitOfMeasure>
+        </ItemDetail>
+      </ItemOut>
+    </OrderRequest>
+  </Request>
+</cXML>

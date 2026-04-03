@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE cXML SYSTEM "http://xml.cxml.org/schemas/cXML/1.2.069/cXML.dtd">
+<cXML payloadID="sample-SBE-26-009912@test" timestamp="2026-04-03T12:00:00-05:00" version="1.2.069">
+  <Header>
+    <From><Credential domain="TestNetwork"><Identity>TEST-SBE-26-009912</Identity></Credential></From>
+    <To><Correspondent><Contact><Name>EnPro Industries</Name><Email>orders@enproinc.com</Email></Contact></Correspondent></To>
+    <Sender><Credential domain="TestNetwork"><Identity>TEST-SENDER</Identity></Credential></Sender>
+  </Header>
+  <Request>
+    <OrderRequest>
+      <OrderRequestHeader orderID="SBE-26-009912" orderDate="2026-04-03" orderType="regular">
+        <Total><Money currency="USD">1830.25</Money></Total>
+        <ShipTo>
+          <Address>
+            <Name>South Bend Ethanol, LLC</Name>
+            <PostalAddress>
+              <Street>3201 W Calvert St</Street>
+              <City>South Bend</City>
+              <State>IN</State>
+              <PostalCode>46613-1010</PostalCode>
+              <Country isoCountryCode="US">United States</Country>
+            </PostalAddress>
+          </Address>
+        </ShipTo>
+        <Contact role="purchasingAgent">
+          <Name>Mark Jensen</Name>
+          <Email>mjensen@southbendethanol.com</Email>
+        </Contact>
+        <Comments>Sample PO for testing</Comments>
+      </OrderRequestHeader>
+      <ItemOut lineNumber="1" quantity="25" requestedDeliveryDate="2026-04-15">
+        <ItemID><SupplierPartID>T10540036</SupplierPartID></ItemID>
+        <ItemDetail>
+          <UnitPrice><Money currency="USD">73.21</Money></UnitPrice>
+          <Description>Pall Cartridge Industrial</Description>
+          <UnitOfMeasure>EA</UnitOfMeasure>
+        </ItemDetail>
+      </ItemOut>
+    </OrderRequest>
+  </Request>
+</cXML>

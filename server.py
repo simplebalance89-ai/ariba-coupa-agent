@@ -727,8 +727,34 @@ async def edit_po(intake_id: str, req: EditPORequest):
         updates["edit_notes"] = req.notes
 
     updates["edited_at"] = datetime.utcnow().isoformat()
+
+    # Re-run confidence scoring after edit
+    item_scores = updates.get("item_scores", po.get("item_scores", []))
+    cust_score = 1.0 if req.customer_id_p21 else (po.get("customer_match", {}).get("score", 0))
+    ship_score = cust_score * 0.95
+    is_dup = po.get("duplicate", {}).get("is_duplicate", False)
+
+    new_conf = score_customer_po(
+        customer_score=cust_score,
+        shipto_score=ship_score,
+        item_scores=item_scores,
+        is_duplicate=is_dup,
+    )
+    updates["confidence"] = new_conf.overall
+    updates["review_required"] = new_conf.review_required
+    updates["reason"] = new_conf.reason
+    if new_conf.overall == "green":
+        updates["review_status"] = "approved"
+
     local_store.update_po(intake_id, updates)
-    return {"status": "edited", "intake_id": intake_id}
+
+    return {
+        "status": "edited",
+        "intake_id": intake_id,
+        "new_confidence": new_conf.overall,
+        "reason": new_conf.reason,
+        "review_required": new_conf.review_required,
+    }
 
 
 # ── CISM Schema Reference ───────────────────────────────────────────────────
@@ -1180,16 +1206,23 @@ async def list_customer_items(customer_id: str = "", limit: int = 100):
             if len(rows) >= limit:
                 break
         rows = rows[:limit]
-    return [{
-        "p21_customer_id": r.get("p21_customer_id"),
-        "customer_part_number": r.get("customer_part_number"),
-        "p21_inv_mast_uid": r.get("p21_inv_mast_uid"),
-        "p21_item_desc": r.get("p21_item_desc"),
-        "unit_of_measure": r.get("unit_of_measure"),
-        "product_group_id": r.get("product_group_id"),
-        "unit_price_avg": r.get("unit_price_avg"),
-        "seen_count": r.get("seen_count"),
-    } for r in rows]
+    # Enrich with customer names
+    results = []
+    for r in rows:
+        cid = r.get("p21_customer_id", "")
+        cust_detail = engine.customers_p21.get(cid, {})
+        results.append({
+            "p21_customer_id": cid,
+            "customer_name": cust_detail.get("customer_name", ""),
+            "customer_part_number": r.get("customer_part_number"),
+            "p21_inv_mast_uid": r.get("p21_inv_mast_uid"),
+            "p21_item_desc": r.get("p21_item_desc"),
+            "unit_of_measure": r.get("unit_of_measure"),
+            "product_group_id": r.get("product_group_id"),
+            "unit_price_avg": r.get("unit_price_avg"),
+            "seen_count": r.get("seen_count"),
+        })
+    return results
 
 
 @app.get("/api/v1/crosswalk/po-history")
