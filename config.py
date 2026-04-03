@@ -53,8 +53,21 @@ class Settings(BaseSettings):
     dynamics_client_secret: str = ""
     dynamics_tenant_id: str = ""
 
+    # ── P21 SQL (direct ODBC for SO pull / reads) ──
+    p21_sql_server: str = ""
+    p21_sql_database: str = "P21"
+    p21_sql_driver: str = "{ODBC Driver 17 for SQL Server}"
+    p21_sql_uid: str = ""
+    p21_sql_pwd: str = ""
+    p21_company_no: int = 1
+    p21_location_id: int = 10
+
     # ── CISM Output ──
     cism_output_dir: str = "./cism_output"
+    cism_so_output_dir: str = "./cism_so_output"
+
+    # ── Crosswalk CSVs ──
+    crosswalk_dir: str = "./crosswalks"
 
     class Config:
         env_file = ".env"

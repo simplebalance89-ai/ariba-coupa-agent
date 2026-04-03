@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE cXML SYSTEM "http://xml.cxml.org/schemas/cXML/1.2.069/cXML.dtd">
+<cXML payloadID="2026040355667@ariba.com" timestamp="2026-04-03T14:15:00-05:00" version="1.2.069">
+  <Header>
+    <From><Credential domain="AribaNetworkId"><Identity>AN-3M-00445</Identity></Credential></From>
+    <To><Correspondent><Contact><Name>EnPro Industries</Name><Email>orders@enproinc.com</Email></Contact></Correspondent></To>
+    <Sender><Credential domain="AribaNetworkId"><Identity>AN-3M-00445</Identity></Credential></Sender>
+  </Header>
+  <Request>
+    <OrderRequest>
+      <OrderRequestHeader orderID="4822951299" orderDate="2026-04-03" orderType="regular">
+        <Total><Money currency="USD">4250.00</Money></Total>
+        <ShipTo>
+          <Address>
+            <Name>Minnesota Mining &amp; Mfg.</Name>
+            <PostalAddress>
+              <Street>22614 Route 84 N</Street>
+              <City>Cordova</City>
+              <State>IL</State>
+              <PostalCode>61242-9779</PostalCode>
+              <Country isoCountryCode="US">United States</Country>
+            </PostalAddress>
+          </Address>
+        </ShipTo>
+        <Contact role="purchasingAgent">
+          <Name>Tom Baker</Name>
+          <Email>tbaker@mmm.com</Email>
+          <Phone><TelephoneNumber><AreaOrCityCode>309</AreaOrCityCode><Number>555-0142</Number></TelephoneNumber></Phone>
+        </Contact>
+        <Comments>UPS Collect # V6A466. For LTL, refer to http://trr.3m.com</Comments>
+      </OrderRequestHeader>
+      <ItemOut lineNumber="1" quantity="10" requestedDeliveryDate="2026-04-12">
+        <ItemID><SupplierPartID>FLOWSERVE/VALTEK LINEAR PRODUCTS</SupplierPartID></ItemID>
+        <ItemDetail>
+          <UnitPrice><Money currency="USD">2374.00</Money></UnitPrice>
+          <Description>1.5" FV4370/213.04 Flowserve Valtek Linear Valve</Description>
+          <UnitOfMeasure>EA</UnitOfMeasure>
+        </ItemDetail>
+      </ItemOut>
+      <ItemOut lineNumber="2" quantity="5" requestedDeliveryDate="2026-04-18">
+        <ItemID><SupplierPartID>UNKNOWN-PART-XYZ</SupplierPartID></ItemID>
+        <ItemDetail>
+          <UnitPrice><Money currency="USD">150.00</Money></UnitPrice>
+          <Description>Custom gasket assembly - special order</Description>
+          <UnitOfMeasure>EA</UnitOfMeasure>
+        </ItemDetail>
+      </ItemOut>
+    </OrderRequest>
+  </Request>
+</cXML>

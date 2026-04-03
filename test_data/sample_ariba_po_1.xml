@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE cXML SYSTEM "http://xml.cxml.org/schemas/cXML/1.2.069/cXML.dtd">
+<cXML payloadID="2026040312345@ariba.com" timestamp="2026-04-03T10:00:00-05:00" version="1.2.069">
+  <Header>
+    <From><Credential domain="AribaNetworkId"><Identity>AN01234567890</Identity></Credential></From>
+    <To><Correspondent><Contact><Name>EnPro Industries</Name><Email>orders@enproinc.com</Email></Contact></Correspondent></To>
+    <Sender><Credential domain="AribaNetworkId"><Identity>AN09876543210</Identity></Credential></Sender>
+  </Header>
+  <Request>
+    <OrderRequest>
+      <OrderRequestHeader orderID="4500867099" orderDate="2026-04-03" orderType="regular" orderVersion="1">
+        <Total><Money currency="USD">12450.00</Money></Total>
+        <ShipTo>
+          <Address>
+            <Name>Waupaca Foundry, Inc.</Name>
+            <PostalAddress>
+              <Street>9856 State Highway 66</Street>
+              <City>Tell City</City>
+              <State>IN</State>
+              <PostalCode>47586</PostalCode>
+              <Country isoCountryCode="US">United States</Country>
+            </PostalAddress>
+          </Address>
+        </ShipTo>
+        <Contact role="purchasingAgent">
+          <Name>Sarah Johnson</Name>
+          <Email>sjohnson@waupacafoundry.com</Email>
+          <Phone><TelephoneNumber><AreaOrCityCode>812</AreaOrCityCode><Number>547-0740</Number></TelephoneNumber></Phone>
+        </Contact>
+        <Comments>UPS Ground Collect. Dock hours 7am-3pm M-F.</Comments>
+        <Extrinsic name="AribaNetwork.PaymentTermsExplanation">Net 30</Extrinsic>
+      </OrderRequestHeader>
+      <ItemOut lineNumber="1" quantity="24" requestedDeliveryDate="2026-04-15">
+        <ItemID><SupplierPartID>PH0260</SupplierPartID></ItemID>
+        <ItemDetail>
+          <UnitPrice><Money currency="USD">185.50</Money></UnitPrice>
+          <Description>Pall Filter Element - High Pressure</Description>
+          <UnitOfMeasure>EA</UnitOfMeasure>
+        </ItemDetail>
+      </ItemOut>
+      <ItemOut lineNumber="2" quantity="12" requestedDeliveryDate="2026-04-15">
+        <ItemID><SupplierPartID>9000238</SupplierPartID></ItemID>
+        <ItemDetail>
+          <UnitPrice><Money currency="USD">96.52</Money></UnitPrice>
+          <Description>Pall Seal Kit - Standard</Description>
+          <UnitOfMeasure>EA</UnitOfMeasure>
+        </ItemDetail>
+      </ItemOut>
+      <ItemOut lineNumber="3" quantity="6" requestedDeliveryDate="2026-04-20">
+        <ItemID><SupplierPartID>490.646.1Y.BC</SupplierPartID></ItemID>
+        <ItemDetail>
+          <UnitPrice><Money currency="USD">24.73</Money></UnitPrice>
+          <Description>Lechler Spray Nozzle - Brass</Description>
+          <UnitOfMeasure>EA</UnitOfMeasure>
+        </ItemDetail>
+      </ItemOut>
+    </OrderRequest>
+  </Request>
+</cXML>

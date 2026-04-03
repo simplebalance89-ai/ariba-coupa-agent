@@ -3,283 +3,345 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EnPro OMS — Order Review Portal</title>
+<title>EnPro PO Agent</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f1117; color: #e0e0e0; }
+a { color: #60a5fa; text-decoration: none; }
 
-/* Layout */
-.app { display: grid; grid-template-columns: 300px 1fr; grid-template-rows: 60px 1fr; height: 100vh; }
-header { grid-column: 1 / -1; background: #1a1d27; border-bottom: 1px solid #2a2d3a; display: flex; align-items: center; padding: 0 24px; justify-content: space-between; }
-header h1 { font-size: 18px; color: #fff; }
-.stats-bar { display: flex; gap: 16px; font-size: 13px; }
-.stat { padding: 4px 12px; border-radius: 12px; font-weight: 600; }
-.stat.green { background: #0d3320; color: #4ade80; }
-.stat.yellow { background: #332b00; color: #fbbf24; }
-.stat.red { background: #3b1111; color: #f87171; }
-.stat.total { background: #1e293b; color: #94a3b8; }
+.topbar { background: #1a1d27; border-bottom: 1px solid #2a2d3a; padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+.topbar h1 { font-size: 17px; color: #fff; font-weight: 600; }
+.topbar h1 span { color: #64748b; font-weight: 400; font-size: 13px; margin-left: 8px; }
+.status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #4ade80; margin-right: 6px; }
 
-/* Sidebar */
-.sidebar { background: #141620; border-right: 1px solid #2a2d3a; overflow-y: auto; }
-.sidebar-header { padding: 16px; border-bottom: 1px solid #2a2d3a; }
-.sidebar-header h2 { font-size: 14px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
-.filter-tabs { display: flex; gap: 4px; margin-top: 8px; }
-.filter-tab { padding: 4px 10px; border-radius: 8px; font-size: 12px; cursor: pointer; border: 1px solid #2a2d3a; background: transparent; color: #94a3b8; }
-.filter-tab.active { background: #2563eb; color: #fff; border-color: #2563eb; }
-.po-list { list-style: none; }
-.po-item { padding: 12px 16px; border-bottom: 1px solid #1e2030; cursor: pointer; transition: background 0.15s; }
+/* Stats */
+.stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; padding: 20px 24px; }
+.stat-card { background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 8px; padding: 16px 20px; }
+.stat-card .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; }
+.stat-card .value { font-size: 28px; font-weight: 700; color: #fff; margin-top: 4px; }
+.stat-card .sub { font-size: 12px; color: #475569; margin-top: 2px; }
+
+/* Tabs */
+.tabs { display: flex; gap: 0; padding: 0 24px; border-bottom: 1px solid #2a2d3a; }
+.tab { padding: 12px 20px; font-size: 14px; color: #64748b; cursor: pointer; border-bottom: 2px solid transparent; background: none; border-top: none; border-left: none; border-right: none; }
+.tab:hover { color: #e0e0e0; }
+.tab.active { color: #fff; border-bottom-color: #3b82f6; }
+.tab .badge { background: #334155; color: #94a3b8; padding: 2px 8px; border-radius: 10px; font-size: 11px; margin-left: 6px; }
+
+/* Content */
+.content { padding: 24px; }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* Queue */
+.queue-layout { display: grid; grid-template-columns: 320px 1fr; gap: 20px; }
+.queue-sidebar { background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 8px; max-height: 600px; overflow-y: auto; }
+.queue-header { padding: 12px 16px; border-bottom: 1px solid #2a2d3a; display: flex; justify-content: space-between; align-items: center; }
+.queue-header h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; }
+.filter-pills { display: flex; gap: 4px; }
+.pill { padding: 3px 10px; border-radius: 12px; font-size: 11px; cursor: pointer; border: 1px solid #2a2d3a; background: transparent; color: #64748b; }
+.pill.active { background: #3b82f6; color: #fff; border-color: #3b82f6; }
+.po-item { padding: 12px 16px; border-bottom: 1px solid #1e2030; cursor: pointer; }
 .po-item:hover { background: #1a1d2a; }
-.po-item.selected { background: #1e2a4a; border-left: 3px solid #2563eb; }
-.po-item .po-number { font-weight: 600; font-size: 14px; color: #fff; }
-.po-item .po-meta { font-size: 12px; color: #64748b; margin-top: 2px; }
-.po-item .confidence-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
-.confidence-dot.green { background: #4ade80; }
-.confidence-dot.yellow { background: #fbbf24; }
-.confidence-dot.red { background: #f87171; }
+.po-item.selected { background: #1e2a4a; border-left: 3px solid #3b82f6; }
+.po-num { font-weight: 600; font-size: 14px; color: #fff; }
+.po-meta { font-size: 12px; color: #475569; margin-top: 3px; }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+.dot.green { background: #4ade80; } .dot.yellow { background: #fbbf24; } .dot.red { background: #f87171; }
 
-/* Main Panel */
-.main { padding: 24px; overflow-y: auto; }
-.empty-state { display: flex; align-items: center; justify-content: center; height: 100%; color: #475569; font-size: 16px; }
+/* Detail Panel */
+.detail-panel { background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 8px; padding: 24px; }
+.detail-panel h2 { font-size: 20px; margin-bottom: 16px; }
+.badge-conf { display: inline-block; padding: 3px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; margin-left: 8px; }
+.badge-conf.green { background: #0d3320; color: #4ade80; }
+.badge-conf.yellow { background: #332b00; color: #fbbf24; }
+.badge-conf.red { background: #3b1111; color: #f87171; }
+.meta-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 16px 0; }
+.meta-box { background: #141620; border-radius: 6px; padding: 12px; }
+.meta-box .lbl { font-size: 10px; text-transform: uppercase; color: #475569; letter-spacing: 0.5px; }
+.meta-box .val { font-size: 15px; color: #fff; margin-top: 4px; }
+.meta-box .val.warn { color: #f87171; }
 
-/* PO Detail */
-.po-detail { max-width: 900px; }
-.po-detail h2 { font-size: 22px; margin-bottom: 16px; }
-.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
-.detail-card { background: #1a1d27; border-radius: 8px; padding: 16px; border: 1px solid #2a2d3a; }
-.detail-card label { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
-.detail-card .value { font-size: 16px; color: #fff; margin-top: 4px; }
-.confidence-badge { display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 13px; font-weight: 600; }
-.confidence-badge.green { background: #0d3320; color: #4ade80; }
-.confidence-badge.yellow { background: #332b00; color: #fbbf24; }
-.confidence-badge.red { background: #3b1111; color: #f87171; }
+/* Lines table */
+table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; }
+th { text-align: left; padding: 8px 10px; color: #475569; font-size: 11px; text-transform: uppercase; border-bottom: 1px solid #2a2d3a; }
+td { padding: 8px 10px; border-bottom: 1px solid #1e2030; }
+tr:hover { background: #141620; }
+.score-pill { font-size: 11px; padding: 2px 8px; border-radius: 8px; }
+.score-pill.hi { background: #0d3320; color: #4ade80; }
+.score-pill.mid { background: #332b00; color: #fbbf24; }
+.score-pill.lo { background: #3b1111; color: #f87171; }
 
-/* Lines Table */
-.lines-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
-.lines-table th { text-align: left; padding: 8px 12px; font-size: 11px; color: #64748b; text-transform: uppercase; border-bottom: 1px solid #2a2d3a; }
-.lines-table td { padding: 8px 12px; font-size: 14px; border-bottom: 1px solid #1e2030; }
-.lines-table tr:hover { background: #1a1d2a; }
-.match-score { font-size: 12px; padding: 2px 8px; border-radius: 8px; }
-.match-score.high { background: #0d3320; color: #4ade80; }
-.match-score.mid { background: #332b00; color: #fbbf24; }
-.match-score.low { background: #3b1111; color: #f87171; }
+/* Buttons */
+.btn { padding: 8px 20px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; }
+.btn-green { background: #16a34a; color: #fff; } .btn-green:hover { background: #15803d; }
+.btn-red { background: #dc2626; color: #fff; } .btn-red:hover { background: #b91c1c; }
+.btn-gray { background: #334155; color: #e2e8f0; } .btn-gray:hover { background: #475569; }
+.action-bar { display: flex; gap: 10px; margin-top: 16px; padding-top: 16px; border-top: 1px solid #2a2d3a; }
 
-/* Action Bar */
-.action-bar { display: flex; gap: 12px; padding: 16px 0; border-top: 1px solid #2a2d3a; margin-top: 16px; }
-.btn { padding: 10px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all 0.15s; }
-.btn-approve { background: #16a34a; color: #fff; }
-.btn-approve:hover { background: #15803d; }
-.btn-reject { background: #dc2626; color: #fff; }
-.btn-reject:hover { background: #b91c1c; }
-.btn-secondary { background: #334155; color: #e2e8f0; }
-.btn-secondary:hover { background: #475569; }
+/* Upload */
+.upload-zone { background: #1a1d27; border: 2px dashed #2a2d3a; border-radius: 8px; padding: 40px; text-align: center; max-width: 600px; }
+.upload-zone input[type="file"] { margin: 12px 0; }
+.upload-zone select, .upload-zone input { padding: 8px; background: #141620; color: #e0e0e0; border: 1px solid #2a2d3a; border-radius: 4px; }
 
-/* Upload Section */
-.upload-section { margin-top: 24px; padding: 24px; background: #1a1d27; border-radius: 8px; border: 2px dashed #2a2d3a; text-align: center; }
-.upload-section input[type="file"] { margin: 12px 0; }
+/* Crosswalk */
+.xw-section { background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+.xw-section h3 { font-size: 14px; margin-bottom: 12px; }
 
-/* Loading */
-.loading { text-align: center; padding: 40px; color: #64748b; }
+/* Pipeline */
+.pipe-step { background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 8px; padding: 16px 20px; margin-bottom: 12px; display: flex; align-items: center; gap: 16px; }
+.pipe-num { width: 32px; height: 32px; border-radius: 50%; background: #3b82f6; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; }
+.pipe-step .pipe-title { font-weight: 600; font-size: 14px; color: #fff; }
+.pipe-step .pipe-desc { font-size: 12px; color: #64748b; margin-top: 2px; }
+
+.empty { text-align: center; padding: 60px; color: #475569; }
 </style>
 </head>
 <body>
-<div class="app">
-  <header>
-    <h1>EnPro OMS — Order Review Portal</h1>
-    <div class="stats-bar" id="statsBar">
-      <span class="stat total" id="statTotal">- total</span>
-      <span class="stat green" id="statGreen">- green</span>
-      <span class="stat yellow" id="statYellow">- yellow</span>
-      <span class="stat red" id="statRed">- red</span>
-      <span class="stat total" id="statPending">- pending</span>
-    </div>
-  </header>
 
-  <div class="sidebar">
-    <div class="sidebar-header">
-      <h2>Review Queue</h2>
-      <div class="filter-tabs">
-        <button class="filter-tab active" onclick="filterQueue('all')">All</button>
-        <button class="filter-tab" onclick="filterQueue('red')">Red</button>
-        <button class="filter-tab" onclick="filterQueue('yellow')">Yellow</button>
-        <button class="filter-tab" onclick="filterQueue('green')">Green</button>
+<div class="topbar">
+  <h1>EnPro PO Agent <span>v3.0 — Customer Crosswalk</span></h1>
+  <div><span class="status-dot"></span> Online</div>
+</div>
+
+<div class="stats" id="statsRow">
+  <div class="stat-card"><div class="label">Total Processed</div><div class="value" id="sTotal">-</div><div class="sub">all time</div></div>
+  <div class="stat-card"><div class="label">Auto-Approved</div><div class="value" id="sGreen">-</div><div class="sub">green confidence</div></div>
+  <div class="stat-card"><div class="label">Needs Review</div><div class="value" id="sPending">-</div><div class="sub">in queue</div></div>
+  <div class="stat-card"><div class="label">Customers Mapped</div><div class="value" id="sCustXW">-</div><div class="sub">crosswalk entries</div></div>
+  <div class="stat-card"><div class="label">Item Coverage</div><div class="value" id="sItemXW">-</div><div class="sub">customer-item pairs</div></div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="showTab('queue')">Review Queue <span class="badge" id="queueBadge">0</span></button>
+  <button class="tab" onclick="showTab('upload')">Upload PO</button>
+  <button class="tab" onclick="showTab('crosswalk')">Crosswalk</button>
+  <button class="tab" onclick="showTab('pipeline')">Pipeline</button>
+</div>
+
+<div class="content">
+
+  <!-- REVIEW QUEUE -->
+  <div class="tab-panel active" id="panel-queue">
+    <div class="queue-layout">
+      <div class="queue-sidebar">
+        <div class="queue-header">
+          <h3>Exception Queue</h3>
+          <div class="filter-pills">
+            <button class="pill active" onclick="filterQ('all')">All</button>
+            <button class="pill" onclick="filterQ('yellow')">Yellow</button>
+            <button class="pill" onclick="filterQ('red')">Red</button>
+          </div>
+        </div>
+        <div id="poList"><div class="empty" style="padding:30px;">No POs pending review. Pipeline is fully automated.</div></div>
+      </div>
+      <div class="detail-panel" id="detailPanel">
+        <div class="empty">Select a PO from the queue to review</div>
       </div>
     </div>
-    <ul class="po-list" id="poList">
-      <li class="loading">Loading...</li>
-    </ul>
+  </div>
 
-    <div class="upload-section">
-      <p style="color: #64748b; font-size: 13px;">Upload PO File</p>
-      <input type="file" id="fileUpload" accept=".xml,.pdf">
-      <select id="uploadSource" style="padding: 6px; background: #141620; color: #e0e0e0; border: 1px solid #2a2d3a; border-radius: 4px;">
+  <!-- UPLOAD PO -->
+  <div class="tab-panel" id="panel-upload">
+    <div class="upload-zone">
+      <h3 style="margin-bottom:12px;">Upload PO for Processing</h3>
+      <p style="color:#64748b; font-size:13px; margin-bottom:16px;">Upload a cXML or PDF purchase order to process through the customer crosswalk pipeline.</p>
+      <input type="file" id="fileUpload" accept=".xml,.pdf"><br>
+      <select id="uploadSource" style="margin-top:8px;">
         <option value="ariba">Ariba</option>
         <option value="coupa">Coupa</option>
         <option value="direct">Direct</option>
       </select>
-      <br>
-      <button class="btn btn-secondary" onclick="uploadFile()" style="margin-top: 8px;">Process</button>
+      <button class="btn btn-green" onclick="uploadFile()" style="margin-left:8px;">Process</button>
+      <div id="uploadResult" style="margin-top:16px;"></div>
     </div>
   </div>
 
-  <div class="main" id="mainPanel">
-    <div class="empty-state">Select a PO from the queue to review</div>
+  <!-- CROSSWALK -->
+  <div class="tab-panel" id="panel-crosswalk">
+    <div class="xw-section">
+      <h3>Customer Crosswalk</h3>
+      <p style="color:#64748b; font-size:13px; margin-bottom:12px;">Maps Ariba/Coupa ship-to names to P21 customer IDs. Learns from every approved PO.</p>
+      <table id="custXWTable">
+        <tr><th>P21 Customer ID</th><th>Customer Name</th><th>Ship-To Name</th><th>Ship-To Zip</th><th>Source</th><th>Method</th><th>Seen</th></tr>
+      </table>
+      <div id="custXWEmpty" class="empty" style="padding:20px;">Loading crosswalk data...</div>
+    </div>
+    <div class="xw-section">
+      <h3>Customer-Item Crosswalk</h3>
+      <p style="color:#64748b; font-size:13px; margin-bottom:12px;">Maps customer part numbers to P21 items (inv_mast_uid). Seeded from 45,923 SO lines.</p>
+      <div class="empty" style="padding:20px;">Item crosswalk data available via API: GET /api/v1/crosswalk/items</div>
+    </div>
   </div>
+
+  <!-- PIPELINE -->
+  <div class="tab-panel" id="panel-pipeline">
+    <h3 style="margin-bottom:16px;">PO-to-SO Processing Pipeline</h3>
+    <div class="pipe-step"><div class="pipe-num">1</div><div><div class="pipe-title">Email Intake</div><div class="pipe-desc">Poll orders@enproinc.com via Microsoft Graph API. Classify source (Ariba/Coupa) from sender domain + cXML headers.</div></div></div>
+    <div class="pipe-step"><div class="pipe-num">2</div><div><div class="pipe-title">Parse PO</div><div class="pipe-desc">Extract header + lines from cXML OrderRequest or PDF via Azure Document Intelligence.</div></div></div>
+    <div class="pipe-step"><div class="pipe-num">3</div><div><div class="pipe-title">Customer Match</div><div class="pipe-desc">Match ship-to name + zip to P21 customer_id using crosswalk. Fuzzy fallback with Jaccard + Levenshtein.</div></div></div>
+    <div class="pipe-step"><div class="pipe-num">4</div><div><div class="pipe-title">Item Match</div><div class="pipe-desc">Match each line's supplier_part_id to P21 inv_mast_uid via customer_part_number crosswalk (100% populated from oe_line).</div></div></div>
+    <div class="pipe-step"><div class="pipe-num">5</div><div><div class="pipe-title">Confidence Score</div><div class="pipe-desc">4-dimension scoring: customer (0.30) + ship-to (0.15) + items (0.45) + dedup (0.10). Green/Yellow/Red.</div></div></div>
+    <div class="pipe-step"><div class="pipe-num">6</div><div><div class="pipe-title">CISM SO Generation</div><div class="pipe-desc">Generate P21 Order/Quote Import CSV (header + lines) matching the CISM batch schema. Green = auto-stage.</div></div></div>
+    <div class="pipe-step"><div class="pipe-num">7</div><div><div class="pipe-title">Learning Loop</div><div class="pipe-desc">Every approved match feeds back into crosswalk CSVs. Customer + item + ship-to mappings grow over time.</div></div></div>
+  </div>
+
 </div>
 
 <script>
 const API = '';
 let queue = [];
 let currentFilter = 'all';
-let selectedPO = null;
+let selectedId = null;
+
+function showTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  event.target.closest('.tab').classList.add('active');
+  if (name === 'crosswalk') loadCustXW();
+}
 
 async function loadStats() {
   try {
-    const resp = await fetch(`${API}/api/v1/stats`);
-    const data = await resp.json();
-    document.getElementById('statTotal').textContent = `${data.total || 0} total`;
-    document.getElementById('statGreen').textContent = `${data.green || 0} green`;
-    document.getElementById('statYellow').textContent = `${data.yellow || 0} yellow`;
-    document.getElementById('statRed').textContent = `${data.red || 0} red`;
-    document.getElementById('statPending').textContent = `${data.pending || 0} pending`;
-  } catch (e) { console.error('Stats error:', e); }
+    const r = await fetch(`${API}/api/v1/stats`);
+    const d = await r.json();
+    document.getElementById('sTotal').textContent = d.total || 0;
+    document.getElementById('sGreen').textContent = d.green || 0;
+    document.getElementById('sPending').textContent = d.pending || 0;
+    document.getElementById('sCustXW').textContent = d.crosswalk?.vendors || 0;
+    document.getElementById('sItemXW').textContent = d.crosswalk?.items || 0;
+    document.getElementById('queueBadge').textContent = d.pending || 0;
+  } catch(e) { console.error('Stats:', e); }
 }
 
 async function loadQueue(filter) {
   try {
-    const url = filter && filter !== 'all'
-      ? `${API}/api/v1/review/queue?confidence=${filter}`
-      : `${API}/api/v1/review/queue`;
-    const resp = await fetch(url);
-    queue = await resp.json();
+    const url = filter && filter !== 'all' ? `${API}/api/v1/review/queue?confidence=${filter}` : `${API}/api/v1/review/queue`;
+    const r = await fetch(url);
+    queue = await r.json();
     renderQueue();
-  } catch (e) {
-    document.getElementById('poList').innerHTML = '<li class="loading">Error loading queue</li>';
-  }
+  } catch(e) { document.getElementById('poList').innerHTML = '<div class="empty" style="padding:20px;">Error loading queue</div>'; }
 }
 
 function renderQueue() {
-  const list = document.getElementById('poList');
-  if (!queue.length) {
-    list.innerHTML = '<li class="loading">No POs pending review</li>';
-    return;
-  }
-  list.innerHTML = queue.map(po => `
-    <li class="po-item ${selectedPO === po.intake_id ? 'selected' : ''}" onclick="selectPO('${po.intake_id}')">
-      <div>
-        <span class="confidence-dot ${po.confidence}"></span>
-        <span class="po-number">${po.po_number || 'Unknown PO'}</span>
-      </div>
-      <div class="po-meta">${po.source || ''} &middot; ${po.vendor_raw || 'Unknown vendor'} &middot; ${po.received ? new Date(po.received).toLocaleDateString() : ''}</div>
-    </li>
+  const el = document.getElementById('poList');
+  if (!queue.length) { el.innerHTML = '<div class="empty" style="padding:30px;">No POs pending review. Pipeline is fully automated.</div>'; return; }
+  el.innerHTML = queue.map(po => `
+    <div class="po-item ${selectedId === po.intake_id ? 'selected' : ''}" onclick="selectPO('${po.intake_id}')">
+      <div><span class="dot ${po.confidence}"></span><span class="po-num">${po.po_number || 'Unknown PO'}</span></div>
+      <div class="po-meta">${po.source || ''} &middot; ${po.supplier || po.vendor_raw || 'Unknown'} &middot; ${po.received ? new Date(po.received).toLocaleDateString() : ''}</div>
+    </div>
   `).join('');
 }
 
-function selectPO(intakeId) {
-  selectedPO = intakeId;
+function selectPO(id) {
+  selectedId = id;
   renderQueue();
-  const po = queue.find(p => p.intake_id === intakeId);
+  const po = queue.find(p => p.intake_id === id);
   if (!po) return;
 
-  const panel = document.getElementById('mainPanel');
-  const scoreClass = s => s >= 0.9 ? 'high' : s >= 0.6 ? 'mid' : 'low';
+  const payload = po.raw_payload || {};
+  const header = payload.header || {};
+  const lines = payload.lines || [];
 
+  const panel = document.getElementById('detailPanel');
   panel.innerHTML = `
-    <div class="po-detail">
-      <h2>PO ${po.po_number || 'Unknown'} <span class="confidence-badge ${po.confidence}">${(po.confidence || '').toUpperCase()}</span></h2>
-
-      <div class="detail-grid">
-        <div class="detail-card">
-          <label>Source</label>
-          <div class="value">${po.source || '-'}</div>
-        </div>
-        <div class="detail-card">
-          <label>Vendor (Raw)</label>
-          <div class="value">${po.vendor_raw || '-'}</div>
-        </div>
-        <div class="detail-card">
-          <label>P21 Vendor ID</label>
-          <div class="value">${po.vendor_p21 || '<span style="color:#f87171">NOT MAPPED</span>'}</div>
-        </div>
-        <div class="detail-card">
-          <label>Received</label>
-          <div class="value">${po.received ? new Date(po.received).toLocaleString() : '-'}</div>
-        </div>
-      </div>
-
-      <h3 style="margin-bottom: 12px; color: #94a3b8;">Line Items</h3>
-      <p style="color: #475569; font-size: 13px; margin-bottom: 12px;">Line item details will load from PO detail endpoint when connected to staging DB.</p>
-
-      <div class="action-bar">
-        <button class="btn btn-approve" onclick="approvePO('${po.intake_id}')">Approve</button>
-        <button class="btn btn-reject" onclick="rejectPO('${po.intake_id}')">Reject</button>
-        <button class="btn btn-secondary" onclick="editMapping('${po.intake_id}')">Edit Mapping</button>
-      </div>
+    <h2>PO ${po.po_number || '?'} <span class="badge-conf ${po.confidence}">${(po.confidence||'').toUpperCase()}</span></h2>
+    <div class="meta-grid">
+      <div class="meta-box"><div class="lbl">Customer (Ship-To)</div><div class="val">${header.ship2_name || po.supplier || '-'}</div></div>
+      <div class="meta-box"><div class="lbl">P21 Customer ID</div><div class="val ${header.customer_id_p21 ? '' : 'warn'}">${header.customer_id_p21 || 'NOT MATCHED'}</div></div>
+      <div class="meta-box"><div class="lbl">Match Method</div><div class="val">${header.customer_match_method || '-'} (${(header.customer_match_score||0).toFixed ? (header.customer_match_score||0).toFixed(2) : '-'})</div></div>
+      <div class="meta-box"><div class="lbl">Ship-To Address</div><div class="val">${header.ship2_add1 || ''}, ${header.ship2_city || ''} ${header.ship2_state || ''} ${header.ship2_zip || ''}</div></div>
+      <div class="meta-box"><div class="lbl">Source</div><div class="val">${po.source || '-'}</div></div>
+      <div class="meta-box"><div class="lbl">Received</div><div class="val">${po.received ? new Date(po.received).toLocaleString() : '-'}</div></div>
+    </div>
+    <h3 style="margin:16px 0 8px;">Line Items (${lines.length})</h3>
+    <table>
+      <tr><th>#</th><th>Customer Part #</th><th>Description</th><th>Qty</th><th>Price</th><th>P21 Item</th><th>Match</th></tr>
+      ${lines.map((l,i) => `<tr>
+        <td>${l.line_no || i+1}</td>
+        <td>${l.supplier_part_id || '-'}</td>
+        <td>${(l.item_description||'').substring(0,40)}</td>
+        <td>${l.qty_ordered || 0}</td>
+        <td>$${(l.unit_price||0).toFixed ? (l.unit_price||0).toFixed(2) : '0.00'}</td>
+        <td>${l.item_id_p21 || '<span style="color:#f87171">UNMAPPED</span>'}</td>
+        <td><span class="score-pill ${(l.crosswalk_match_score||0) >= 0.9 ? 'hi' : (l.crosswalk_match_score||0) >= 0.6 ? 'mid' : 'lo'}">${((l.crosswalk_match_score||0)*100).toFixed(0)}%</span></td>
+      </tr>`).join('')}
+    </table>
+    <div class="action-bar">
+      <button class="btn btn-green" onclick="approvePO('${po.intake_id}')">Approve & Create SO</button>
+      <button class="btn btn-red" onclick="rejectPO('${po.intake_id}')">Reject</button>
+      <button class="btn btn-gray" onclick="editMapping('${po.intake_id}')">Edit Mapping</button>
     </div>
   `;
 }
 
-async function approvePO(intakeId) {
+async function approvePO(id) {
   const reviewer = prompt('Reviewer name:', 'Brittany');
   if (!reviewer) return;
   try {
-    const resp = await fetch(`${API}/api/v1/review/po/${intakeId}/approve`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({reviewer, notes: ''}),
-    });
-    const data = await resp.json();
-    alert(`PO ${intakeId} approved!`);
-    loadQueue(currentFilter);
-    loadStats();
-  } catch (e) { alert('Error: ' + e.message); }
+    await fetch(`${API}/api/v1/review/po/${id}/approve`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({reviewer, notes:''}) });
+    alert('Approved! CISM SO file will be generated.');
+    loadQueue(currentFilter); loadStats();
+  } catch(e) { alert('Error: ' + e.message); }
 }
 
-async function rejectPO(intakeId) {
+async function rejectPO(id) {
   const reason = prompt('Rejection reason:');
   if (!reason) return;
   try {
-    await fetch(`${API}/api/v1/review/po/${intakeId}/reject`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({reviewer: 'reviewer', reason}),
-    });
-    alert(`PO ${intakeId} rejected.`);
-    loadQueue(currentFilter);
-    loadStats();
-  } catch (e) { alert('Error: ' + e.message); }
+    await fetch(`${API}/api/v1/review/po/${id}/reject`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({reviewer:'reviewer', reason}) });
+    alert('Rejected.');
+    loadQueue(currentFilter); loadStats();
+  } catch(e) { alert('Error: ' + e.message); }
 }
 
-function editMapping(intakeId) {
-  alert('Mapping editor — coming in next iteration. For now, add mappings via the API:\nPOST /api/v1/review/crosswalk/vendor\nPOST /api/v1/review/crosswalk/item');
-}
+function editMapping(id) { alert('Mapping editor coming soon. Use API:\nPOST /api/v1/review/crosswalk/customer\nPOST /api/v1/review/crosswalk/item'); }
 
-function filterQueue(filter) {
-  currentFilter = filter;
-  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+function filterQ(f) {
+  currentFilter = f;
+  document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
   event.target.classList.add('active');
-  loadQueue(filter);
+  loadQueue(f);
 }
 
 async function uploadFile() {
-  const fileInput = document.getElementById('fileUpload');
-  const source = document.getElementById('uploadSource').value;
-  if (!fileInput.files.length) { alert('Select a file first'); return; }
-
-  const formData = new FormData();
-  formData.append('file', fileInput.files[0]);
-  formData.append('source', source);
-
+  const fi = document.getElementById('fileUpload');
+  const src = document.getElementById('uploadSource').value;
+  if (!fi.files.length) { alert('Select a file'); return; }
+  const fd = new FormData();
+  fd.append('file', fi.files[0]);
+  fd.append('source', src);
   try {
-    const resp = await fetch(`${API}/api/v1/intake/upload`, {method: 'POST', body: formData});
-    const data = await resp.json();
-    alert(`Processed: ${data.po_no || 'Unknown'}\nConfidence: ${data.confidence || '-'}\nReview required: ${data.review_required}`);
-    loadQueue(currentFilter);
-    loadStats();
-    fileInput.value = '';
-  } catch (e) { alert('Upload error: ' + e.message); }
+    const r = await fetch(`${API}/api/v1/intake/upload`, {method:'POST', body:fd});
+    const d = await r.json();
+    document.getElementById('uploadResult').innerHTML = `
+      <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:8px; padding:16px; margin-top:12px;">
+        <strong>PO ${d.po_no || '?'}</strong> processed<br>
+        Confidence: <span class="badge-conf ${d.confidence}">${(d.confidence||'').toUpperCase()}</span><br>
+        Customer: ${d.customer_match?.name || 'Not matched'} (${d.customer_match?.method || '-'}, ${(d.customer_match?.score||0).toFixed(2)})<br>
+        Lines: ${d.lines || 0} | Review: ${d.review_required ? 'Yes' : 'No'}
+      </div>`;
+    loadQueue(currentFilter); loadStats();
+    fi.value = '';
+  } catch(e) { alert('Upload error: ' + e.message); }
 }
 
-// Boot
+async function loadCustXW() {
+  try {
+    const r = await fetch(`${API}/api/v1/crosswalk/customers?limit=50`);
+    const data = await r.json();
+    const tbl = document.getElementById('custXWTable');
+    const empty = document.getElementById('custXWEmpty');
+    if (data.length) {
+      empty.style.display = 'none';
+      tbl.innerHTML = '<tr><th>P21 ID</th><th>Customer</th><th>Ship-To</th><th>Zip</th><th>Source</th><th>Method</th><th>Seen</th></tr>' +
+        data.map(r => `<tr><td>${r.p21_customer_id||''}</td><td>${r.p21_customer_name||''}</td><td>${r.ship2_name||''}</td><td>${r.ship2_zip||''}</td><td>${r.source_system||''}</td><td>${r.match_method||''}</td><td>${r.seen_count||''}</td></tr>`).join('');
+    } else { empty.textContent = 'No crosswalk data yet. Build from P21 exports via POST /api/v1/crosswalk/build'; }
+  } catch(e) { document.getElementById('custXWEmpty').textContent = 'Error loading: ' + e.message; }
+}
+
 loadStats();
 loadQueue('all');
 setInterval(loadStats, 30000);

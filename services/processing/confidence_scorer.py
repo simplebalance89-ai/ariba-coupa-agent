@@ -133,6 +133,111 @@ def score_payload(lines_crosswalk_scores: List[float],
     )
 
 
+# ── 4-Dimension Customer PO Scoring ──────────────────────────────────────────
+
+CUSTOMER_GREEN = 0.90
+CUSTOMER_YELLOW = 0.65
+SHIPTO_GREEN = 0.85
+SHIPTO_YELLOW = 0.60
+
+
+@dataclass
+class CustomerPOResult:
+    customer_score: float
+    customer_confidence: Literal["green", "yellow", "red"]
+    shipto_score: float
+    shipto_confidence: Literal["green", "yellow", "red"]
+    line_results: List[LineConfidence]
+    green_ratio: float
+    red_count: int
+    is_duplicate: bool
+    overall: Literal["green", "yellow", "red"]
+    review_required: bool
+    reason: str
+
+
+def _score_dimension(score: float, green_thresh: float, yellow_thresh: float) -> Literal["green", "yellow", "red"]:
+    if score >= green_thresh:
+        return "green"
+    elif score >= yellow_thresh:
+        return "yellow"
+    return "red"
+
+
+def score_customer_po(
+    customer_score: float,
+    shipto_score: float,
+    item_scores: List[float],
+    is_duplicate: bool = False,
+) -> CustomerPOResult:
+    """
+    4-dimension confidence scoring for customer PO processing.
+    Weights: customer 0.30, ship-to 0.15, items 0.45, dedup 0.10
+    """
+    customer_conf = _score_dimension(customer_score, CUSTOMER_GREEN, CUSTOMER_YELLOW)
+    shipto_conf = _score_dimension(shipto_score, SHIPTO_GREEN, SHIPTO_YELLOW)
+
+    line_results = []
+    for i, s in enumerate(item_scores, 1):
+        line_results.append(LineConfidence(
+            line_no=i, item_raw="", item_p21="",
+            crosswalk_score=s, confidence=score_line(s),
+        ))
+
+    total = len(line_results)
+    green_count = sum(1 for l in line_results if l.confidence == "green")
+    red_count = sum(1 for l in line_results if l.confidence == "red")
+    green_ratio = green_count / total if total else 0.0
+    avg_item = sum(item_scores) / len(item_scores) if item_scores else 0.0
+
+    dedup_pass = 0.0 if is_duplicate else 1.0
+    weighted = (
+        customer_score * 0.30
+        + shipto_score * 0.15
+        + avg_item * 0.45
+        + dedup_pass * 0.10
+    )
+
+    # Overall determination
+    if is_duplicate:
+        overall = "red"
+        review_required = True
+        reason = "Duplicate PO detected"
+    elif weighted >= 0.88 and customer_conf == "green" and red_count == 0:
+        overall = "green"
+        review_required = False
+        reason = "All matches high confidence"
+    elif weighted >= 0.60 and customer_conf != "red" and red_count <= 1:
+        overall = "yellow"
+        review_required = True
+        reason = f"Partial matches: {green_count}/{total} green lines, customer={customer_conf}"
+    else:
+        overall = "red"
+        review_required = True
+        reasons = []
+        if customer_conf == "red":
+            reasons.append("customer not matched")
+        if red_count > 0:
+            reasons.append(f"{red_count} unmatched items")
+        if not reasons:
+            reasons.append("low overall score")
+        reason = "; ".join(reasons)
+
+    return CustomerPOResult(
+        customer_score=customer_score,
+        customer_confidence=customer_conf,
+        shipto_score=shipto_score,
+        shipto_confidence=shipto_conf,
+        line_results=line_results,
+        green_ratio=green_ratio,
+        red_count=red_count,
+        is_duplicate=is_duplicate,
+        overall=overall,
+        review_required=review_required,
+        reason=reason,
+    )
+
+
 def get_review_priority(result: ConfidenceResult) -> int:
     """
     Get review queue priority (lower = higher priority).

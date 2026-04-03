@@ -20,7 +20,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Create directories for CISM output
-RUN mkdir -p /app/cism_output /app/cism_archive /app/crosswalks /app/logs
+RUN mkdir -p /app/cism_output /app/cism_so_output /app/cism_archive /app/crosswalks /app/logs /app/test_data
 
 # Expose port
 EXPOSE 8000

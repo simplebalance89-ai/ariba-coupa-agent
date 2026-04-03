@@ -50,6 +50,11 @@ from services.processing.duplicate_detector import (
 from cism_generator import generate_cism_file
 from services.processing.blob_uploader import upload_approved_cism, upload_rejected_cism
 from services.processing.quote_exporter import export_quotes_to_blob
+from services.processing.so_exporter import export_so_data
+from services.processing.customer_crosswalk_engine import CustomerCrosswalkEngine
+from services.processing.confidence_scorer import score_customer_po
+from services.processing.cism_so_generator import generate_cism_so
+from services.processing.crosswalk_learner import learn_from_approval
 
 settings = get_settings()
 
@@ -126,7 +131,7 @@ async def intake_cxml(request: Request):
     if "coupa" in content.lower():
         source = "coupa"
 
-    payload = await _process_po(header, lines, raw, source, "cxml")
+    payload = await _process_po_to_so(header, lines, raw, source, "cxml")
 
     return HTMLResponse(
         content=po_parser.generate_cxml_response(header.po_no, 200, "OK"),
@@ -161,7 +166,7 @@ async def intake_upload(
     else:
         raise HTTPException(400, "Unsupported file type. Upload .xml or .pdf")
 
-    payload = await _process_po(header, lines, raw, source, fmt)
+    payload = await _process_po_to_so(header, lines, raw, source, fmt)
     return payload
 
 
@@ -241,6 +246,195 @@ async def _process_po(header, lines, raw_content, source, fmt) -> dict:
         "vendor_match": {"p21_id": vendor_p21, "score": vendor_score},
         "lines": len(lines),
         "cism_path": cism_path,
+    }
+
+
+# ── Customer Crosswalk Engine (lazy init) ────────────────────────────────────
+
+_customer_engine = None
+
+def _get_customer_engine():
+    global _customer_engine
+    if _customer_engine is None:
+        _customer_engine = CustomerCrosswalkEngine(settings.crosswalk_dir)
+    return _customer_engine
+
+
+# ── SO Processing Pipeline (customer-focused) ───────────────────────────────
+
+async def _process_po_to_so(header, lines, raw_content, source, fmt) -> dict:
+    """
+    Customer-focused pipeline: match incoming PO to P21 customer/items,
+    score confidence, generate CISM SO import files.
+    """
+    engine = _get_customer_engine()
+
+    # Generate intake ID for dedup
+    intake_id = generate_intake_id(
+        header.po_no,
+        header.ship2_name or header.supplier_name or "",
+        source,
+    )
+
+    if is_duplicate(intake_id, header.po_no, source):
+        logger.info(f"Duplicate PO: {header.po_no} from {source}")
+        return {"status": "duplicate", "po_no": header.po_no}
+
+    # 1. Customer matching
+    cust_match = engine.match_customer(
+        ship2_name=header.ship2_name,
+        ship2_add1=header.ship2_add1,
+        ship2_city=header.ship2_city,
+        ship2_state=header.ship2_state,
+        ship2_zip=header.ship2_zip,
+        buyer_email=header.buyer_email,
+        source_system=source,
+        po_no=header.po_no,
+    )
+
+    header.customer_id_p21 = cust_match.p21_customer_id
+    header.customer_name_p21 = cust_match.p21_customer_name
+    header.customer_match_score = cust_match.match_score
+    header.customer_match_method = cust_match.match_method
+
+    # Get customer detail for defaults
+    cust_detail = engine.get_customer_detail(cust_match.p21_customer_id) if cust_match.p21_customer_id else {}
+
+    # 2. Item matching per line
+    item_scores = []
+    cism_lines = []
+    for line in lines:
+        item_match = engine.match_item(
+            supplier_part_id=line.supplier_part_id,
+            item_description=line.item_description,
+            unit_price=line.unit_price,
+            uom=line.unit_of_measure,
+            p21_customer_id=cust_match.p21_customer_id,
+            source_system=source,
+        )
+        line.item_id_p21 = item_match.p21_inv_mast_uid or None
+        line.crosswalk_match_score = item_match.match_score
+        item_scores.append(item_match.match_score)
+
+        cism_lines.append({
+            "item_id": item_match.p21_inv_mast_uid or line.supplier_part_id,
+            "qty_ordered": line.qty_ordered,
+            "unit_of_measure": item_match.unit_of_measure or line.unit_of_measure or "EA",
+            "unit_price": line.unit_price,
+            "item_description": line.item_description or item_match.p21_item_desc,
+            "product_group": item_match.product_group,
+            "required_date": line.required_date or line.date_due,
+            "supplier_part_id": line.supplier_part_id,
+            "inv_mast_uid": item_match.p21_inv_mast_uid,
+            "line_no": line.line_no,
+        })
+
+    # 3. Duplicate PO check
+    dup = engine.check_duplicate_po(header.po_no, cust_match.p21_customer_id)
+
+    # 4. Confidence scoring (4-dimension)
+    ship_to_score = cust_match.match_score * 0.95 if cust_match.p21_customer_id else 0.0
+    conf = score_customer_po(
+        customer_score=cust_match.match_score,
+        shipto_score=ship_to_score,
+        item_scores=item_scores,
+        is_duplicate=dup.is_duplicate,
+    )
+
+    # 5. Generate CISM SO files if customer matched
+    cism_result = None
+    if cust_match.p21_customer_id and conf.overall != "red":
+        cism_result = generate_cism_so(
+            p21_customer_id=cust_match.p21_customer_id,
+            p21_customer_name=cust_match.p21_customer_name,
+            po_no=header.po_no,
+            order_date=header.order_date,
+            requested_date=header.date_due if hasattr(header, "date_due") else "",
+            ship2_name=header.ship2_name,
+            ship2_add1=header.ship2_add1,
+            ship2_add2=header.ship2_add2,
+            ship2_city=header.ship2_city,
+            ship2_state=header.ship2_state,
+            ship2_zip=header.ship2_zip,
+            ship2_country=header.ship2_country,
+            contact_name=header.buyer or cust_match.p21_customer_name,
+            taker=settings.cism_output_dir,  # TODO: configurable taker
+            terms=cust_detail.get("terms_id", ""),
+            delivery_instructions=header.comments or header.po_desc,
+            approved="Y" if conf.overall == "green" else "N",
+            class_1=cust_detail.get("class_1id", ""),
+            source_id=source,
+            lines=cism_lines,
+            output_dir=settings.cism_so_output_dir,
+        )
+
+    # 6. Auto-learn from green matches
+    if conf.overall == "green" and cust_match.p21_customer_id:
+        learn_from_approval(
+            p21_customer_id=cust_match.p21_customer_id,
+            p21_customer_name=cust_match.p21_customer_name,
+            source_system=source,
+            ship2_name=header.ship2_name,
+            ship2_add1=header.ship2_add1,
+            ship2_city=header.ship2_city,
+            ship2_state=header.ship2_state,
+            ship2_zip=header.ship2_zip,
+            po_no=header.po_no,
+            lines=[{
+                "supplier_part_id": cl["supplier_part_id"],
+                "inv_mast_uid": cl["inv_mast_uid"],
+                "unit_price": cl["unit_price"],
+                "unit_of_measure": cl["unit_of_measure"],
+                "item_description": cl["item_description"],
+                "line_no": cl["line_no"],
+            } for cl in cism_lines if cl.get("inv_mast_uid")],
+            crosswalk_dir=settings.crosswalk_dir,
+        )
+
+    # Build payload for staging
+    payload = POPayload(
+        intake_id=intake_id,
+        source=SourceSystem(source.upper()) if source.upper() in SourceSystem.__members__ else SourceSystem.DIRECT,
+        format=fmt,
+        received_at=datetime.utcnow().isoformat(),
+        header=header,
+        lines=lines,
+        raw_content=raw_content[:8000] if isinstance(raw_content, str) else "",
+        overall_confidence=conf.overall,
+        review_required=conf.review_required,
+        cism_blob_path=cism_result["header_path"] if cism_result else None,
+    )
+
+    log_intake(payload)
+
+    logger.info(
+        f"Processed PO→SO {header.po_no} | source={source} | "
+        f"customer={cust_match.p21_customer_id}({cust_match.match_score:.2f},{cust_match.match_method}) | "
+        f"confidence={conf.overall} | lines={len(lines)} | "
+        f"duplicate={dup.is_duplicate}"
+    )
+
+    return {
+        "status": "processed",
+        "po_no": header.po_no,
+        "intake_id": intake_id,
+        "confidence": conf.overall,
+        "review_required": conf.review_required,
+        "reason": conf.reason,
+        "customer_match": {
+            "p21_id": cust_match.p21_customer_id,
+            "name": cust_match.p21_customer_name,
+            "score": cust_match.match_score,
+            "method": cust_match.match_method,
+            "candidates": cust_match.candidates,
+        },
+        "duplicate": {
+            "is_duplicate": dup.is_duplicate,
+            "existing_order": dup.existing_order_no,
+        },
+        "lines": len(lines),
+        "item_scores": [round(s, 2) for s in item_scores],
+        "cism": cism_result,
     }
 
 
@@ -487,6 +681,112 @@ async def quotes_status():
             }
         except Exception:
             return {"status": "no_data", "blob": None}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+# ── Crosswalk Build ─────────────────────────────────────────────────────────
+
+class CrosswalkBuildRequest(BaseModel):
+    headers_csv: str = ""
+    lines_csv: str = ""
+    customers_csv: str = ""
+
+@app.post("/api/v1/crosswalk/build")
+async def build_crosswalks(req: CrosswalkBuildRequest):
+    """Build crosswalk CSVs from P21 SO exports."""
+    try:
+        from services.processing.crosswalk_csv_builder import build_all
+        build_all(
+            headers_path=req.headers_csv,
+            lines_path=req.lines_csv,
+            customers_path=req.customers_csv,
+            output_dir=settings.crosswalk_dir,
+        )
+        # Reload the engine
+        global _customer_engine
+        _customer_engine = None
+        return {"status": "success", "crosswalk_dir": settings.crosswalk_dir}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@app.get("/api/v1/crosswalk/customers")
+async def list_customer_crosswalk(limit: int = 100):
+    """List customer crosswalk entries."""
+    engine = _get_customer_engine()
+    rows = engine.customer_xw[:limit]
+    return [{
+        "p21_customer_id": r.get("p21_customer_id"),
+        "p21_customer_name": r.get("p21_customer_name"),
+        "ship2_name": r.get("ship2_name"),
+        "ship2_zip": r.get("ship2_zip"),
+        "source_system": r.get("source_system"),
+        "match_method": r.get("match_method"),
+        "seen_count": r.get("seen_count"),
+    } for r in rows]
+
+
+# ── P21 Sales Order Pull ────────────────────────────────────────────────────
+
+class SOExportRequest(BaseModel):
+    days_back: int = 90
+    include_customers: bool = True
+    include_ship_tos: bool = True
+    include_items: bool = True
+
+@app.post("/api/v1/so/export")
+async def export_sales_orders(req: SOExportRequest):
+    """Pull Sales Orders from P21 and export to blob storage."""
+    try:
+        result = export_so_data(
+            days_back=req.days_back,
+            include_customers=req.include_customers,
+            include_ship_tos=req.include_ship_tos,
+            include_items=req.include_items,
+        )
+        return {
+            "status": "success",
+            "timestamp": result.get("timestamp"),
+            "so_headers_count": result.get("so_headers_count"),
+            "so_lines_count": result.get("so_lines_count"),
+            "customers_count": result.get("customers_count"),
+            "ship_tos_count": result.get("ship_tos_count"),
+            "items_count": result.get("items_count"),
+            "uploads": result.get("uploads", {}),
+        }
+    except Exception as e:
+        logger.error(f"SO export failed: {e}")
+        raise HTTPException(500, f"SO export failed: {str(e)}")
+
+
+@app.get("/api/v1/so/status")
+async def so_export_status():
+    """Get status of latest SO export in blob storage."""
+    try:
+        from services.processing.blob_uploader import get_uploader
+        uploader = get_uploader()
+
+        if not uploader.is_configured():
+            return {"status": "not_configured", "blob": None}
+
+        files = {}
+        for name in ["so_headers", "so_lines", "customers", "ship_tos", "items"]:
+            blob_name = f"crosswalk/p21/{name}_latest.csv"
+            try:
+                blob_client = uploader.client.get_blob_client(
+                    container=uploader.BLOB_CONTAINER_NAME, blob=blob_name,
+                )
+                props = blob_client.get_blob_properties()
+                files[name] = {
+                    "last_modified": props.last_modified.isoformat() if props.last_modified else None,
+                    "size_bytes": props.size,
+                }
+            except Exception:
+                files[name] = None
+
+        has_data = any(v is not None for v in files.values())
+        return {"status": "available" if has_data else "no_data", "files": files}
     except Exception as e:
         return {"status": "error", "error": str(e)}
 

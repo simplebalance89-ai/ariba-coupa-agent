@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE cXML SYSTEM "http://xml.cxml.org/schemas/cXML/1.2.069/cXML.dtd">
+<cXML payloadID="coupa-po-2026040399@coupahost.com" timestamp="2026-04-03T11:30:00-05:00" version="1.2.069">
+  <Header>
+    <From><Credential domain="CoupaSupplierNetwork"><Identity>CSN-CARGILL-5541</Identity></Credential></From>
+    <To><Correspondent><Contact><Name>EnPro Industries</Name><Email>orders@enproinc.com</Email></Contact></Correspondent></To>
+    <Sender><Credential domain="CoupaSupplierNetwork"><Identity>CSN-CARGILL-5541</Identity></Credential></Sender>
+  </Header>
+  <Request>
+    <OrderRequest>
+      <OrderRequestHeader orderID="4521174599" orderDate="2026-04-03" orderType="regular">
+        <Total><Money currency="USD">8750.00</Money></Total>
+        <ShipTo>
+          <Address>
+            <Name>Cargill Inc</Name>
+            <PostalAddress>
+              <Street>2309 E Front St</Street>
+              <City>Kansas City</City>
+              <State>MO</State>
+              <PostalCode>64120-1431</PostalCode>
+              <Country isoCountryCode="US">United States</Country>
+            </PostalAddress>
+          </Address>
+        </ShipTo>
+        <Contact role="purchasingAgent">
+          <Name>Mike Reynolds</Name>
+          <Email>mike.reynolds@cargill.com</Email>
+        </Contact>
+        <Comments>UPS Collect # E24E42. Contact receiving dock before delivery.</Comments>
+        <Extrinsic name="AribaNetwork.PaymentTermsExplanation">Net 15</Extrinsic>
+      </OrderRequestHeader>
+      <ItemOut lineNumber="1" quantity="50" requestedDeliveryDate="2026-04-10">
+        <ItemID><SupplierPartID>T10540036</SupplierPartID></ItemID>
+        <ItemDetail>
+          <UnitPrice><Money currency="USD">73.21</Money></UnitPrice>
+          <Description>Pall Replacement Cartridge - Industrial</Description>
+          <UnitOfMeasure>EA</UnitOfMeasure>
+        </ItemDetail>
+      </ItemOut>
+      <ItemOut lineNumber="2" quantity="100" requestedDeliveryDate="2026-04-10">
+        <ItemID><SupplierPartID>3000TAEUC</SupplierPartID></ItemID>
+        <ItemDetail>
+          <UnitPrice><Money currency="USD">66.15</Money></UnitPrice>
+          <Description>Teledyne Analytical Sensor</Description>
+          <UnitOfMeasure>EA</UnitOfMeasure>
+        </ItemDetail>
+      </ItemOut>
+    </OrderRequest>
+  </Request>
+</cXML>

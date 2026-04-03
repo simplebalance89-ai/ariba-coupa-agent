@@ -168,10 +168,18 @@ class POHeader(BaseModel):
     contract_no: str = ""
     release_no: str = ""
 
-    # === NEW: Crosswalk + Confidence fields ===
+    # === Crosswalk + Confidence fields ===
     vendor_id_raw: Optional[str] = None
     vendor_id_p21: Optional[str] = None
     vendor_match_score: Optional[float] = None
+
+    # === Customer-focused crosswalk (SO creation) ===
+    customer_id_p21: Optional[str] = None
+    customer_name_p21: Optional[str] = None
+    customer_match_score: Optional[float] = None
+    customer_match_method: Optional[str] = None
+    ship_to_id_p21: Optional[str] = None
+    ship_to_match_score: Optional[float] = None
 
 
 class POPayload(BaseModel):
