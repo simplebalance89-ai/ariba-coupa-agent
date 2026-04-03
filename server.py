@@ -686,6 +686,11 @@ async def approve_po(intake_id: str, req: ApproveRequest):
     # Add to CISM batch
     try:
         updated_po = local_store.get_po(intake_id)
+        # Inject customer defaults for CISM (contact_id, address_id, terms, carrier)
+        cust_id = updated_po.get("customer_match", {}).get("p21_id", "")
+        if cust_id:
+            engine = _get_customer_engine()
+            updated_po["customer_defaults"] = engine.get_customer_defaults(cust_id)
         add_to_batch(updated_po)
     except Exception as e:
         logger.error(f"CISM batch error: {e}")

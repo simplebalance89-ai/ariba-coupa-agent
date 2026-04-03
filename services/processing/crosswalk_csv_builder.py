@@ -268,6 +268,50 @@ def build_item_master(lines: list[dict], customers: list[dict] = None) -> list[d
 
 
 # ---------------------------------------------------------------------------
+# 5. Customer defaults for CISM (contact_id, address_id, terms, carrier)
+# ---------------------------------------------------------------------------
+
+def build_customer_defaults(headers: list[dict]) -> list[dict]:
+    """Build CISM defaults per customer from most-common SO header values."""
+    custs = defaultdict(lambda: {
+        "contact_ids": defaultdict(int),
+        "address_ids": defaultdict(int),
+        "terms": defaultdict(int),
+        "carriers": defaultdict(int),
+        "name": "",
+    })
+
+    for h in headers:
+        cid = h.get("customer_id", "").strip()
+        if not cid:
+            continue
+        c = custs[cid]
+        c["name"] = h.get("ship2_name", "").strip() or c["name"]
+        cntct = h.get("contact_id", "").strip()
+        addr = h.get("address_id", "").strip()
+        terms = h.get("terms", "").strip()
+        carrier = h.get("carrier_id", "").strip()
+        if cntct: c["contact_ids"][cntct] += 1
+        if addr: c["address_ids"][addr] += 1
+        if terms: c["terms"][terms] += 1
+        if carrier: c["carriers"][carrier] += 1
+
+    rows = []
+    for cid, c in custs.items():
+        rows.append({
+            "customer_id": cid,
+            "customer_name": c["name"],
+            "default_contact_id": max(c["contact_ids"], key=c["contact_ids"].get) if c["contact_ids"] else "",
+            "default_address_id": max(c["address_ids"], key=c["address_ids"].get) if c["address_ids"] else "",
+            "default_terms": max(c["terms"], key=c["terms"].get) if c["terms"] else "",
+            "default_carrier_id": max(c["carriers"], key=c["carriers"].get) if c["carriers"] else "",
+        })
+
+    logger.info(f"Customer defaults: {len(rows)} entries")
+    return rows
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -296,6 +340,10 @@ def build_all(headers_path: str, lines_path: str, customers_path: str, output_di
 
     # Copy customers as-is (already has address data joined)
     _write_csv(customers, os.path.join(output_dir, "customers_p21.csv"))
+
+    # Customer defaults for CISM (contact_id, address_id, terms, carrier)
+    cust_defaults = build_customer_defaults(headers)
+    _write_csv(cust_defaults, os.path.join(output_dir, "customer_defaults.csv"))
 
     logger.info(f"All crosswalk CSVs written to {output_dir}")
 

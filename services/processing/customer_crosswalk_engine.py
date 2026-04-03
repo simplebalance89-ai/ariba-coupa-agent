@@ -75,6 +75,7 @@ class CustomerCrosswalkEngine:
         self.po_history: dict[str, list[dict]] = defaultdict(list)  # po_no → records
         self.item_master: dict[str, dict] = {}  # inv_mast_uid → item
         self.customers_p21: dict[str, dict] = {}  # customer_id → customer record
+        self.customer_defaults: dict[str, dict] = {}  # customer_id → {contact_id, address_id, terms, carrier_id}
 
         self._load()
 
@@ -115,6 +116,13 @@ class CustomerCrosswalkEngine:
             if cid:
                 self.customers_p21[cid] = row
         logger.info(f"  customers_p21: {len(self.customers_p21)} customers")
+
+        # Customer defaults (contact_id, address_id, terms, carrier)
+        for row in _read_csv("customer_defaults.csv"):
+            cid = row.get("customer_id", "")
+            if cid:
+                self.customer_defaults[cid] = row
+        logger.info(f"  customer_defaults: {len(self.customer_defaults)} entries")
 
     # ------------------------------------------------------------------
     # Customer Matching
@@ -374,3 +382,7 @@ class CustomerCrosswalkEngine:
     def get_customer_detail(self, p21_customer_id: str) -> dict:
         """Get full customer record from P21 customer master."""
         return self.customers_p21.get(p21_customer_id, {})
+
+    def get_customer_defaults(self, p21_customer_id: str) -> dict:
+        """Get CISM defaults: contact_id, address_id, terms, carrier_id."""
+        return self.customer_defaults.get(p21_customer_id, {})

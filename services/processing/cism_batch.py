@@ -62,6 +62,9 @@ def add_to_batch(po_data: dict):
         logger.warning(f"No import_set_no for PO {po_data.get('po_no')}, skipping batch")
         return
 
+    # Get customer defaults (contact_id, address_id, terms, carrier)
+    defaults = po_data.get("customer_defaults", {})
+
     # Append header row
     h_path = _header_path()
     write_header_row = not os.path.exists(h_path) or os.path.getsize(h_path) == 0
@@ -76,15 +79,15 @@ def add_to_batch(po_data: dict):
             "Company ID": "1",
             "Sales Location ID": "10",
             "Customer PO Number": po_data.get("po_no", "")[:50],
-            "Contact ID": "",
+            "Contact ID": defaults.get("default_contact_id", ""),
             "Contact Name": (header.get("buyer") or cust.get("name", ""))[:50],
-            "Taker": "SYSTEM",
+            "Taker": header.get("taker", "") or "SYSTEM",
             "Job Name": "",
             "Order Date": _fmt_date(header.get("order_date", "")),
             "Requested Date": _fmt_date(header.get("order_date", "")),
             "Quote": "",
             "Approved": "Y",
-            "Ship To ID": "",
+            "Ship To ID": defaults.get("default_address_id", ""),
             "Ship To Name": header.get("ship2_name", "")[:50],
             "Ship To Address 1": header.get("ship2_add1", "")[:50],
             "Ship To Address 2": "",
@@ -94,8 +97,8 @@ def add_to_batch(po_data: dict):
             "Ship To Country": header.get("ship2_country", "US")[:50],
             "Packing Basis": "Partial/Order",
             "Delivery Instructions": (header.get("comments") or "")[:255],
-            "Terms": "",
-            "Carrier ID": "",
+            "Terms": defaults.get("default_terms", ""),
+            "Carrier ID": defaults.get("default_carrier_id", ""),
             "Will Call": "N",
         })
 
