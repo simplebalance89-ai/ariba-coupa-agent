@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE cXML SYSTEM "http://xml.cxml.org/schemas/cXML/1.2.069/cXML.dtd">
+<cXML payloadID="extra-BRIG-V2-001@test" timestamp="2026-04-03T14:00:00-05:00" version="1.2.069">
+  <Header><From><Credential domain="Test"><Identity>TEST</Identity></Credential></From><To><Correspondent><Contact><Name>EnPro</Name></Contact></Correspondent></To><Sender><Credential domain="Test"><Identity>TEST</Identity></Credential></Sender></Header>
+  <Request><OrderRequest>
+    <OrderRequestHeader orderID="BRIG-V2-001" orderDate="2026-04-03" orderType="regular">
+      <Total><Money currency="USD">992.25</Money></Total>
+      <ShipTo><Address><Name>Brigston Electric</Name><PostalAddress><Street>2308 50th St W Unit 7</Street><City>Williston</City><State>ND</State><PostalCode>58801-7024</PostalCode><Country isoCountryCode="US">US</Country></PostalAddress></Address></ShipTo>
+      <Contact role="purchasingAgent"><Name>Jake Olson</Name></Contact>
+    </OrderRequestHeader>
+    <ItemOut lineNumber="1" quantity="15"><ItemID><SupplierPartID>3000TAEUC</SupplierPartID></ItemID><ItemDetail><UnitPrice><Money currency="USD">66.15</Money></UnitPrice><Description>Teledyne Sensor</Description><UnitOfMeasure>EA</UnitOfMeasure></ItemDetail></ItemOut>
+  </OrderRequest></Request>
+</cXML>

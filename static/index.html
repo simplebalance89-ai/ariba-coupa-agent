@@ -94,6 +94,7 @@ tr:hover { background: #141620; }
 </div>
 <div class="tabs">
   <button class="tab active" onclick="showTab('queue')">Review Queue <span class="badge" id="queueBadge">0</span></button>
+  <button class="tab" onclick="showTab('processed')">Processed <span class="badge" id="procBadge">0</span></button>
   <button class="tab" onclick="showTab('upload')">Upload PO</button>
   <button class="tab" onclick="showTab('crosswalk')">Crosswalk</button>
   <button class="tab" onclick="showTab('cism')">CISM Schema</button>
@@ -109,6 +110,7 @@ tr:hover { background: #141620; }
         <h3>Exception Queue</h3>
         <div class="filter-pills">
           <button class="pill active" onclick="filterQ('all')">All</button>
+          <button class="pill" onclick="filterQ('green')">Green</button>
           <button class="pill" onclick="filterQ('yellow')">Yellow</button>
           <button class="pill" onclick="filterQ('red')">Red</button>
         </div>
@@ -118,6 +120,30 @@ tr:hover { background: #141620; }
     <div class="detail-panel" id="detailPanel">
       <div class="empty">Select a PO from the queue to review</div>
     </div>
+  </div>
+</div>
+
+<!-- PROCESSED / CISM BATCH FILES -->
+<div class="tab-panel" id="panel-processed">
+  <div class="xw-section">
+    <h3>Approved POs — CISM Batch Files Ready for P21</h3>
+    <p class="desc">These POs have been reviewed and approved. Download the CISM header + line CSVs, then upload to Azure Blob for P21's scheduled import job.</p>
+    <div class="scroll-table">
+      <table id="procTable">
+        <tr><th>PO #</th><th>Customer</th><th>Source</th><th>Confidence</th><th>Lines</th><th>Reviewed By</th><th>CISM Import Set</th><th>Download</th></tr>
+      </table>
+    </div>
+    <div id="procEmpty" class="empty" style="padding:30px;">No approved POs yet. Approve POs from the Review Queue.</div>
+  </div>
+  <div class="xw-section">
+    <h3>All Processed POs</h3>
+    <p class="desc">Complete history of every PO that came through the system.</p>
+    <div class="scroll-table">
+      <table id="allPOsTable">
+        <tr><th>PO #</th><th>Customer</th><th>Source</th><th>Confidence</th><th>Status</th><th>Lines</th><th>Received</th></tr>
+      </table>
+    </div>
+    <div id="allPOsEmpty" class="empty" style="padding:20px;">Loading...</div>
   </div>
 </div>
 
@@ -168,15 +194,17 @@ tr:hover { background: #141620; }
   </div>
 
   <div class="xw-section">
-    <h3>Dynamics Quotes <span class="count" id="xwQuoteCount"></span></h3>
-    <p class="desc">LVP quotes from Dynamics 365 CRM. Upload quote export JSON or use the quote pull API.</p>
-    <div style="margin-bottom:12px;">
-      <input type="file" id="quoteFile" accept=".json,.csv">
-      <button class="btn btn-gray" onclick="uploadQuotes()" style="margin-left:8px;">Upload Quotes</button>
-      <span id="quoteUploadStatus" style="font-size:11px; color:#475569; margin-left:8px;"></span>
-    </div>
-    <div class="scroll-table"><table id="quoteTable"><tr><th>Quote #</th><th>Name</th><th>Status</th><th>Customer</th><th>Price</th><th>Date</th></tr></table></div>
-    <div id="quoteEmpty" class="empty" style="padding:20px;">No quote data loaded. Upload Dynamics export above.</div>
+    <h3>Dynamics Quotes (Active) <span class="count" id="xwQuoteCount"></span></h3>
+    <p class="desc">Active LVP quotes from Dynamics 365 CRM.</p>
+    <div class="scroll-table"><table id="quoteTable"><tr><th>Quote #</th><th>Name</th><th>Customer</th><th>Contact</th><th>Price</th><th>Terms</th><th>Est Completion</th></tr></table></div>
+    <div id="quoteEmpty" class="empty" style="padding:20px;">No quote data loaded.</div>
+  </div>
+
+  <div class="xw-section">
+    <h3>Quote-to-PO Linkage <span class="count" id="xwLinkCount"></span></h3>
+    <p class="desc">Cases that link a Dynamics quote to a customer PO# and EnPro order#. This is how quotes connect to sales orders.</p>
+    <div class="scroll-table"><table id="linkTable"><tr><th>Case #</th><th>Customer PO #</th><th>EnPro Order #</th><th>Customer</th><th>Case Title</th><th>Created</th></tr></table></div>
+    <div id="linkEmpty" class="empty" style="padding:20px;">No PO linkage data loaded.</div>
   </div>
 </div>
 
@@ -577,23 +605,89 @@ async function uploadQuotes() {
 
 async function loadQuotes() {
   try {
-    const data = await (await fetch(`${API}/api/v1/crosswalk/quotes?limit=50`)).json();
+    const data = await (await fetch(`${API}/api/v1/crosswalk/quotes?limit=100`)).json();
+    // Split into quotes vs PO links based on fields
+    const quotes = data.filter(r => r.quote_number);
+    const links = data.filter(r => r.case_number);
+
+    // Quotes table
     const tbl = document.getElementById('quoteTable');
     const empty = document.getElementById('quoteEmpty');
-    document.getElementById('xwQuoteCount').textContent = data.length ? `(${data.length}+ entries)` : '';
-    if (data.length) {
+    document.getElementById('xwQuoteCount').textContent = quotes.length ? `(${quotes.length}+ entries)` : '';
+    if (quotes.length) {
       empty.style.display='none'; tbl.style.display='table';
-      tbl.innerHTML = '<tr><th>Quote #</th><th>Name</th><th>Status</th><th>Customer</th><th>Price</th><th>Date</th></tr>' +
-        data.map(r => `<tr>
-          <td>${r.lvp_quotenumber||r.quote_number||''}</td>
-          <td>${(r.lvp_name||r.name||'').substring(0,35)}</td>
-          <td>${r.lvp_quotestatusname||r.status_name||r.status||''}</td>
-          <td>${r['_lvp_customer_value@OData.Community.Display.V1.FormattedValue']||r.customer_name||r.customer_id||''}</td>
-          <td>${r.lvp_extendedprice||r.extended_price||''}</td>
-          <td>${(r.createdon||r.created_date||'').substring(0,10)}</td>
+      tbl.innerHTML = '<tr><th>Quote #</th><th>Name</th><th>Customer</th><th>Contact</th><th>Price</th><th>Terms</th><th>Est Completion</th></tr>' +
+        quotes.map(r => `<tr>
+          <td style="font-weight:600;color:#60a5fa;">${r.quote_number||''}</td>
+          <td>${(r.quote_name||'').substring(0,40)}</td>
+          <td>${r.customer_name||''}</td>
+          <td>${r.contact_name||''}</td>
+          <td>${r.extended_price ? '$'+parseFloat(r.extended_price).toLocaleString() : ''}</td>
+          <td>${r.payment_terms||''}</td>
+          <td>${r.est_completion||''}</td>
         </tr>`).join('');
     } else { empty.style.display='block'; tbl.style.display='none'; }
+
+    // PO linkage table
+    const linkTbl = document.getElementById('linkTable');
+    const linkEmpty = document.getElementById('linkEmpty');
+    document.getElementById('xwLinkCount').textContent = links.length ? `(${links.length}+ entries)` : '';
+    if (links.length) {
+      linkEmpty.style.display='none'; linkTbl.style.display='table';
+      linkTbl.innerHTML = '<tr><th>Case #</th><th>Customer PO #</th><th>EnPro Order #</th><th>Customer</th><th>Case Title</th><th>Created</th></tr>' +
+        links.map(r => `<tr>
+          <td style="font-family:monospace;font-size:11px;">${r.case_number||''}</td>
+          <td style="font-weight:600;color:#4ade80;">${r.customer_po_number||''}</td>
+          <td style="font-weight:600;">${r.enpro_order_number||''}</td>
+          <td>${r.customer_name||''}</td>
+          <td>${(r.case_title||'').substring(0,45)}</td>
+          <td>${(r.created||'').substring(0,10)}</td>
+        </tr>`).join('');
+    } else { linkEmpty.style.display='block'; linkTbl.style.display='none'; }
   } catch(e) { console.error(e); }
+}
+
+// Processed tab
+async function loadProcessed() {
+  try {
+    // Approved POs with CISM files
+    const approved = await (await fetch(`${API}/api/v1/review/approved`)).json();
+    const procTbl = document.getElementById('procTable');
+    const procEmpty = document.getElementById('procEmpty');
+    document.getElementById('procBadge').textContent = approved.length;
+    if (approved.length) {
+      procEmpty.style.display='none'; procTbl.style.display='table';
+      procTbl.innerHTML = '<tr><th>PO #</th><th>Customer</th><th>Source</th><th>Conf</th><th>Lines</th><th>Reviewed</th><th>CISM Set</th><th>Download</th></tr>' +
+        approved.map(r => `<tr>
+          <td style="font-weight:600;">${r.po_number||''}</td>
+          <td>${r.customer_p21||''} <span style="color:#475569;font-size:10px;">(${r.customer_id_p21||''})</span></td>
+          <td><span style="text-transform:uppercase;font-size:10px;background:${r.source==='ariba'?'#1e3a5f':r.source==='coupa'?'#2d1b69':'#334155'};padding:1px 6px;border-radius:3px;">${r.source||''}</span></td>
+          <td><span class="badge-conf ${r.confidence}">${(r.confidence||'').toUpperCase()}</span></td>
+          <td>${r.lines_count||0}</td>
+          <td>${r.reviewed_by||'auto'} ${r.reviewed_at?(new Date(r.reviewed_at)).toLocaleDateString():''}</td>
+          <td style="font-family:monospace;font-size:11px;">${r.import_set_no||'-'}</td>
+          <td>${r.import_set_no ? `<a href="${API}/api/v1/cism/download/${r.intake_id}/header" class="btn btn-gray" style="padding:3px 8px;font-size:11px;">Header</a> <a href="${API}/api/v1/cism/download/${r.intake_id}/lines" class="btn btn-gray" style="padding:3px 8px;font-size:11px;">Lines</a>` : '-'}</td>
+        </tr>`).join('');
+    } else { procEmpty.style.display='block'; procTbl.style.display='none'; }
+
+    // All POs history
+    const all = await (await fetch(`${API}/api/v1/review/all`)).json();
+    const allTbl = document.getElementById('allPOsTable');
+    const allEmpty = document.getElementById('allPOsEmpty');
+    if (all.length) {
+      allEmpty.style.display='none'; allTbl.style.display='table';
+      allTbl.innerHTML = '<tr><th>PO #</th><th>Customer</th><th>Source</th><th>Conf</th><th>Status</th><th>Lines</th><th>Received</th></tr>' +
+        all.map(r => `<tr>
+          <td style="font-weight:600;">${r.po_number||''}</td>
+          <td>${r.customer_p21||''}</td>
+          <td>${r.source||''}</td>
+          <td><span class="badge-conf ${r.confidence}">${(r.confidence||'').toUpperCase()}</span></td>
+          <td style="color:${r.review_status==='approved'?'#4ade80':r.review_status==='rejected'?'#f87171':'#fbbf24'};font-weight:600;">${(r.review_status||'').toUpperCase()}</td>
+          <td>${r.lines_count||0}</td>
+          <td>${r.received?(new Date(r.received)).toLocaleDateString():''}</td>
+        </tr>`).join('');
+    } else { allEmpty.style.display='block'; allTbl.style.display='none'; }
+  } catch(e) { console.error('Processed:', e); }
 }
 
 function showTab(name) {
@@ -603,6 +697,7 @@ function showTab(name) {
   event.target.closest('.tab')?.classList.add('active');
   if (name === 'crosswalk') { loadAllXW(); loadQuotes(); }
   if (name === 'cism') loadCismSchema();
+  if (name === 'processed') loadProcessed();
 }
 
 loadStats(); loadQueue('all');

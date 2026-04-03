@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE cXML SYSTEM "http://xml.cxml.org/schemas/cXML/1.2.069/cXML.dtd">
+<cXML payloadID="extra-MOT-562499@test" timestamp="2026-04-03T14:00:00-05:00" version="1.2.069">
+  <Header><From><Credential domain="Test"><Identity>TEST</Identity></Credential></From><To><Correspondent><Contact><Name>EnPro</Name></Contact></Correspondent></To><Sender><Credential domain="Test"><Identity>TEST</Identity></Credential></Sender></Header>
+  <Request><OrderRequest>
+    <OrderRequestHeader orderID="MOT-562499" orderDate="2026-04-03" orderType="regular">
+      <Total><Money currency="USD">3363.00</Money></Total>
+      <ShipTo><Address><Name>Motion Industries</Name><PostalAddress><Street>13724 Shoreline Ct E</Street><City>Earth City</City><State>MO</State><PostalCode>63045-1202</PostalCode><Country isoCountryCode="US">US</Country></PostalAddress></Address></ShipTo>
+      <Contact role="purchasingAgent"><Name>Steve Brown</Name></Contact>
+    </OrderRequestHeader>
+    <ItemOut lineNumber="1" quantity="6"><ItemID><SupplierPartID>PH0260</SupplierPartID></ItemID><ItemDetail><UnitPrice><Money currency="USD">185.50</Money></UnitPrice><Description>Pall Filter</Description><UnitOfMeasure>EA</UnitOfMeasure></ItemDetail></ItemOut>
+    <ItemOut lineNumber="2" quantity="3"><ItemID><SupplierPartID>CUSTOM-BEARING-44Z</SupplierPartID></ItemID><ItemDetail><UnitPrice><Money currency="USD">750.00</Money></UnitPrice><Description>Custom Bearing Assembly</Description><UnitOfMeasure>EA</UnitOfMeasure></ItemDetail></ItemOut>
+  </OrderRequest></Request>
+</cXML>

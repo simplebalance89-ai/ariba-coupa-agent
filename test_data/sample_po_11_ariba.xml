@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE cXML SYSTEM "http://xml.cxml.org/schemas/cXML/1.2.069/cXML.dtd">
+<cXML payloadID="extra-ADM-PO-2026-501@test" timestamp="2026-04-03T14:00:00-05:00" version="1.2.069">
+  <Header><From><Credential domain="Test"><Identity>TEST</Identity></Credential></From><To><Correspondent><Contact><Name>EnPro</Name></Contact></Correspondent></To><Sender><Credential domain="Test"><Identity>TEST</Identity></Credential></Sender></Header>
+  <Request><OrderRequest>
+    <OrderRequestHeader orderID="ADM-PO-2026-501" orderDate="2026-04-03" orderType="regular">
+      <Total><Money currency="USD">965.20</Money></Total>
+      <ShipTo><Address><Name>ADM</Name><PostalAddress><Street>130 N Broad St</Street><City>Fremont</City><State>NE</State><PostalCode>68025-4972</PostalCode><Country isoCountryCode="US">US</Country></PostalAddress></Address></ShipTo>
+      <Contact role="purchasingAgent"><Name>Amy Chen</Name></Contact>
+    </OrderRequestHeader>
+    <ItemOut lineNumber="1" quantity="10"><ItemID><SupplierPartID>9000238</SupplierPartID></ItemID><ItemDetail><UnitPrice><Money currency="USD">96.52</Money></UnitPrice><Description>Pall Seal Kit</Description><UnitOfMeasure>EA</UnitOfMeasure></ItemDetail></ItemOut>
+  </OrderRequest></Request>
+</cXML>

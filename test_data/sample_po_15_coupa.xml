@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE cXML SYSTEM "http://xml.cxml.org/schemas/cXML/1.2.069/cXML.dtd">
+<cXML payloadID="extra-INV-EAM-40221@test" timestamp="2026-04-03T14:00:00-05:00" version="1.2.069">
+  <Header><From><Credential domain="Test"><Identity>TEST</Identity></Credential></From><To><Correspondent><Contact><Name>EnPro</Name></Contact></Correspondent></To><Sender><Credential domain="Test"><Identity>TEST</Identity></Credential></Sender></Header>
+  <Request><OrderRequest>
+    <OrderRequestHeader orderID="INV-EAM-40221" orderDate="2026-04-03" orderType="regular">
+      <Total><Money currency="USD">1650.68</Money></Total>
+      <ShipTo><Address><Name>Invenergy Nelson LLC</Name><PostalAddress><Street>1311 Nelson Rd</Street><City>Rock Falls</City><State>IL</State><PostalCode>61071-9722</PostalCode><Country isoCountryCode="US">US</Country></PostalAddress></Address></ShipTo>
+      <Contact role="purchasingAgent"><Name>Maria Lopez</Name></Contact>
+    </OrderRequestHeader>
+    <ItemOut lineNumber="1" quantity="8"><ItemID><SupplierPartID>9000238</SupplierPartID></ItemID><ItemDetail><UnitPrice><Money currency="USD">96.52</Money></UnitPrice><Description>Pall Seal Kit</Description><UnitOfMeasure>EA</UnitOfMeasure></ItemDetail></ItemOut>
+    <ItemOut lineNumber="2" quantity="12"><ItemID><SupplierPartID>T10540036</SupplierPartID></ItemID><ItemDetail><UnitPrice><Money currency="USD">73.21</Money></UnitPrice><Description>Pall Cartridge</Description><UnitOfMeasure>EA</UnitOfMeasure></ItemDetail></ItemOut>
+  </OrderRequest></Request>
+</cXML>

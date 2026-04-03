@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE cXML SYSTEM "http://xml.cxml.org/schemas/cXML/1.2.069/cXML.dtd">
+<cXML payloadID="extra-FAKE-99002@test" timestamp="2026-04-03T14:00:00-05:00" version="1.2.069">
+  <Header><From><Credential domain="Test"><Identity>TEST</Identity></Credential></From><To><Correspondent><Contact><Name>EnPro</Name></Contact></Correspondent></To><Sender><Credential domain="Test"><Identity>TEST</Identity></Credential></Sender></Header>
+  <Request><OrderRequest>
+    <OrderRequestHeader orderID="FAKE-99002" orderDate="2026-04-03" orderType="regular">
+      <Total><Money currency="USD">1000.00</Money></Total>
+      <ShipTo><Address><Name>Global Industrial Partners LLC</Name><PostalAddress><Street>123 Main St</Street><City>Springfield</City><State>MO</State><PostalCode>65801</PostalCode><Country isoCountryCode="US">US</Country></PostalAddress></Address></ShipTo>
+      <Contact role="purchasingAgent"><Name>Jane Doe</Name></Contact>
+    </OrderRequestHeader>
+    <ItemOut lineNumber="1" quantity="50"><ItemID><SupplierPartID>UNKNOWN-A</SupplierPartID></ItemID><ItemDetail><UnitPrice><Money currency="USD">10.00</Money></UnitPrice><Description>Mystery Part A</Description><UnitOfMeasure>EA</UnitOfMeasure></ItemDetail></ItemOut>
+    <ItemOut lineNumber="2" quantity="25"><ItemID><SupplierPartID>UNKNOWN-B</SupplierPartID></ItemID><ItemDetail><UnitPrice><Money currency="USD">20.00</Money></UnitPrice><Description>Mystery Part B</Description><UnitOfMeasure>EA</UnitOfMeasure></ItemDetail></ItemOut>
+  </OrderRequest></Request>
+</cXML>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE cXML SYSTEM "http://xml.cxml.org/schemas/cXML/1.2.069/cXML.dtd">
+<cXML payloadID="extra-CPF-26-8834@test" timestamp="2026-04-03T14:00:00-05:00" version="1.2.069">
+  <Header><From><Credential domain="Test"><Identity>TEST</Identity></Credential></From><To><Correspondent><Contact><Name>EnPro</Name></Contact></Correspondent></To><Sender><Credential domain="Test"><Identity>TEST</Identity></Credential></Sender></Header>
+  <Request><OrderRequest>
+    <OrderRequestHeader orderID="CPF-26-8834" orderDate="2026-04-03" orderType="regular">
+      <Total><Money currency="USD">2391.70</Money></Total>
+      <ShipTo><Address><Name>Charlotte Pipe and Foundry</Name><PostalAddress><Street>5801 N 119th St W</Street><City>Maize</City><State>KS</State><PostalCode>67101-9526</PostalCode><Country isoCountryCode="US">US</Country></PostalAddress></Address></ShipTo>
+      <Contact role="purchasingAgent"><Name>Bob Smith</Name></Contact>
+    </OrderRequestHeader>
+    <ItemOut lineNumber="1" quantity="20"><ItemID><SupplierPartID>T10540036</SupplierPartID></ItemID><ItemDetail><UnitPrice><Money currency="USD">73.21</Money></UnitPrice><Description>Pall Cartridge</Description><UnitOfMeasure>EA</UnitOfMeasure></ItemDetail></ItemOut>
+    <ItemOut lineNumber="2" quantity="5"><ItemID><SupplierPartID>PH0260</SupplierPartID></ItemID><ItemDetail><UnitPrice><Money currency="USD">185.50</Money></UnitPrice><Description>Pall Filter HP</Description><UnitOfMeasure>EA</UnitOfMeasure></ItemDetail></ItemOut>
+  </OrderRequest></Request>
+</cXML>

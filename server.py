@@ -465,7 +465,7 @@ async def _process_po_to_so(header, lines, raw_content, source, fmt) -> dict:
         "source": source,
         "confidence": conf.overall,
         "review_required": conf.review_required,
-        "review_status": "pending" if conf.review_required else "approved",
+        "review_status": "pending",  # ALL POs go through review — Brittany approves
         "reason": conf.reason,
         "customer_match": {
             "p21_id": cust_match.p21_customer_id,
@@ -583,7 +583,55 @@ async def review_all():
         "review_status": po.get("review_status"),
         "received": po.get("received_at"),
         "customer_p21": po.get("customer_match", {}).get("name", ""),
+        "customer_id_p21": po.get("customer_match", {}).get("p21_id", ""),
+        "lines_count": po.get("lines_count", 0),
+        "cism": po.get("cism"),
     } for po in all_pos]
+
+
+@app.get("/api/v1/review/approved")
+async def review_approved():
+    """Get approved POs with CISM file info."""
+    all_pos = local_store.list_pos(status="approved")
+    return [{
+        "intake_id": po.get("intake_id"),
+        "po_number": po.get("po_no"),
+        "source": po.get("source"),
+        "confidence": po.get("confidence"),
+        "customer_p21": po.get("customer_match", {}).get("name", ""),
+        "customer_id_p21": po.get("customer_match", {}).get("p21_id", ""),
+        "lines_count": po.get("lines_count", 0),
+        "reviewed_by": po.get("reviewed_by", ""),
+        "reviewed_at": po.get("reviewed_at", ""),
+        "cism_header": po.get("cism", {}).get("header_path", "") if po.get("cism") else "",
+        "cism_lines": po.get("cism", {}).get("lines_path", "") if po.get("cism") else "",
+        "import_set_no": po.get("cism", {}).get("import_set_no", "") if po.get("cism") else "",
+    } for po in all_pos]
+
+
+from fastapi.responses import FileResponse
+
+@app.get("/api/v1/cism/download/{intake_id}/{file_type}")
+async def download_cism(intake_id: str, file_type: str):
+    """Download a CISM file (header or lines) for a PO."""
+    po = local_store.get_po(intake_id)
+    if not po:
+        raise HTTPException(404, "PO not found")
+    cism = po.get("cism", {})
+    if not cism:
+        raise HTTPException(404, "No CISM file for this PO")
+
+    if file_type == "header":
+        path = cism.get("header_path", "")
+    elif file_type == "lines":
+        path = cism.get("lines_path", "")
+    else:
+        raise HTTPException(400, "file_type must be 'header' or 'lines'")
+
+    if not path or not os.path.exists(path):
+        raise HTTPException(404, f"CISM file not found: {path}")
+
+    return FileResponse(path, media_type="text/csv", filename=os.path.basename(path))
 
 
 class ApproveRequest(BaseModel):
@@ -849,9 +897,13 @@ async def list_quotes(limit: int = 100):
                 if isinstance(data, list):
                     for item in data[:limit]:
                         results.append(item)
-                elif isinstance(data, dict) and "value" in data:
-                    for item in data["value"][:limit]:
-                        results.append(item)
+                elif isinstance(data, dict):
+                    # Try common keys: value, lvp_quotes, lvp_quotelines, results, data
+                    for key in ["value", "lvp_quotes", "lvp_quotelines", "results", "data"]:
+                        if key in data and isinstance(data[key], list):
+                            for item in data[key][:limit]:
+                                results.append(item)
+                            break
             elif fname.endswith(".csv"):
                 import csv as csvmod
                 with open(path, encoding="utf-8-sig") as f:

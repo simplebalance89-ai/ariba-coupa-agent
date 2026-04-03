@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE cXML SYSTEM "http://xml.cxml.org/schemas/cXML/1.2.069/cXML.dtd">
+<cXML payloadID="extra-AMER-39200@test" timestamp="2026-04-03T14:00:00-05:00" version="1.2.069">
+  <Header><From><Credential domain="Test"><Identity>TEST</Identity></Credential></From><To><Correspondent><Contact><Name>EnPro</Name></Contact></Correspondent></To><Sender><Credential domain="Test"><Identity>TEST</Identity></Credential></Sender></Header>
+  <Request><OrderRequest>
+    <OrderRequestHeader orderID="AMER-39200" orderDate="2026-04-03" orderType="regular">
+      <Total><Money currency="USD">2473.00</Money></Total>
+      <ShipTo><Address><Name>AmeriChem Systems, Incorporated</Name><PostalAddress><Street>1740 Molitor Rd</Street><City>Aurora</City><State>IL</State><PostalCode>60505-1346</PostalCode><Country isoCountryCode="US">US</Country></PostalAddress></Address></ShipTo>
+      <Contact role="purchasingAgent"><Name>Pat Wilson</Name></Contact>
+    </OrderRequestHeader>
+    <ItemOut lineNumber="1" quantity="100"><ItemID><SupplierPartID>490.646.1Y.BC</SupplierPartID></ItemID><ItemDetail><UnitPrice><Money currency="USD">24.73</Money></UnitPrice><Description>Lechler Nozzle</Description><UnitOfMeasure>EA</UnitOfMeasure></ItemDetail></ItemOut>
+  </OrderRequest></Request>
+</cXML>
