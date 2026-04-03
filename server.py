@@ -1256,8 +1256,10 @@ async def list_item_master(limit: int = 100):
     rows = list(engine.item_master.values())[:limit]
     return [{
         "p21_inv_mast_uid": r.get("p21_inv_mast_uid"),
+        "p21_part_number": r.get("p21_part_number"),
         "p21_item_desc": r.get("p21_item_desc"),
         "default_selling_unit": r.get("default_selling_unit"),
         "product_group": r.get("product_group"),
         "default_supplier_id": r.get("default_supplier_id"),
+        "supplier_name": r.get("supplier_name"),
     } for r in rows]

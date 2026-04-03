@@ -204,28 +204,65 @@ def build_po_history(headers: list[dict]) -> list[dict]:
 # 4. Item master index — for fallback matching
 # ---------------------------------------------------------------------------
 
-def build_item_master(lines: list[dict]) -> list[dict]:
+def build_item_master(lines: list[dict], customers: list[dict] = None) -> list[dict]:
     """
     Build item master index from SO lines.
-    Dedup by inv_mast_uid, keep most-seen description and product group.
+    Dedup by inv_mast_uid, collect best description and part number.
     """
+    # Build supplier name lookup from customers (supplier_id -> customer who supplies)
+    supplier_names = {}
+    if customers:
+        for c in customers:
+            cid = c.get("customer_id", "").strip()
+            cname = c.get("customer_name", "").strip()
+            if cid and cname:
+                supplier_names[cid] = cname
+
     items = {}
     for l in lines:
         uid = l.get("inv_mast_uid", "").strip()
-        if not uid or uid in items:
+        if not uid:
             continue
-        items[uid] = {
-            "p21_inv_mast_uid": uid,
-            "p21_item_desc": l.get("extended_desc", "").strip() or l.get("customer_part_number", "").strip(),
-            "p21_item_desc_normalized": normalize_name(
-                l.get("extended_desc", "") or l.get("customer_part_number", "")
-            ),
-            "default_selling_unit": l.get("unit_of_measure", "").strip(),
-            "product_group": l.get("product_group_id", "").strip(),
-            "default_supplier_id": l.get("supplier_id", "").strip(),
-        }
 
-    rows = list(items.values())
+        # Get the best description and part number
+        part_no = (l.get("customer_part_number", "").strip()
+                   or l.get("print_part_no", "").strip())
+        desc = (l.get("extended_desc", "").strip()
+                or l.get("additional_description", "").strip()
+                or l.get("generic_custom_description", "").strip()
+                or part_no)
+        supplier_id = l.get("supplier_id", "").strip()
+
+        if uid not in items:
+            items[uid] = {
+                "p21_inv_mast_uid": uid,
+                "p21_part_number": part_no,
+                "p21_item_desc": desc,
+                "p21_item_desc_normalized": normalize_name(desc),
+                "default_selling_unit": l.get("unit_of_measure", "").strip(),
+                "product_group": l.get("product_group_id", "").strip(),
+                "default_supplier_id": supplier_id,
+                "supplier_name": supplier_names.get(supplier_id, ""),
+                "_seen": 1,
+            }
+        else:
+            items[uid]["_seen"] += 1
+            # Keep the best (non-empty) description
+            if desc and (not items[uid]["p21_item_desc"] or items[uid]["p21_item_desc"] == "NULL"):
+                items[uid]["p21_item_desc"] = desc
+                items[uid]["p21_item_desc_normalized"] = normalize_name(desc)
+            if part_no and (not items[uid]["p21_part_number"] or items[uid]["p21_part_number"] == "NULL"):
+                items[uid]["p21_part_number"] = part_no
+            if supplier_id and not items[uid]["supplier_name"]:
+                items[uid]["default_supplier_id"] = supplier_id
+                items[uid]["supplier_name"] = supplier_names.get(supplier_id, "")
+
+    # Clean up _seen and sort by frequency
+    rows = []
+    for item in sorted(items.values(), key=lambda x: x["_seen"], reverse=True):
+        item.pop("_seen", None)
+        rows.append(item)
+
     logger.info(f"Item master index: {len(rows)} unique items")
     return rows
 
@@ -254,7 +291,7 @@ def build_all(headers_path: str, lines_path: str, customers_path: str, output_di
     po_hist = build_po_history(headers)
     _write_csv(po_hist, os.path.join(output_dir, "customer_po_history.csv"))
 
-    item_idx = build_item_master(lines)
+    item_idx = build_item_master(lines, customers)
     _write_csv(item_idx, os.path.join(output_dir, "item_master_index.csv"))
 
     # Copy customers as-is (already has address data joined)
