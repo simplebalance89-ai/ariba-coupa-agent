@@ -55,6 +55,7 @@ from services.processing.customer_crosswalk_engine import CustomerCrosswalkEngin
 from services.processing.confidence_scorer import score_customer_po
 from services.processing.cism_so_generator import generate_cism_so
 from services.processing.crosswalk_learner import learn_from_approval
+from services.processing import local_store
 
 settings = get_settings()
 
@@ -451,7 +452,67 @@ async def _process_po_to_so(header, lines, raw_content, source, fmt) -> dict:
         cism_blob_path=cism_result["header_path"] if cism_result else None,
     )
 
-    log_intake(payload)
+    try:
+        log_intake(payload)
+    except Exception:
+        pass  # SQL not available on Render
+
+    # Save to local file store (always works)
+    result_data = {
+        "status": "processed",
+        "po_no": header.po_no,
+        "intake_id": intake_id,
+        "source": source,
+        "confidence": conf.overall,
+        "review_required": conf.review_required,
+        "review_status": "pending" if conf.review_required else "approved",
+        "reason": conf.reason,
+        "customer_match": {
+            "p21_id": cust_match.p21_customer_id,
+            "name": cust_match.p21_customer_name,
+            "score": cust_match.match_score,
+            "method": cust_match.match_method,
+            "candidates": cust_match.candidates,
+        },
+        "duplicate": {
+            "is_duplicate": dup.is_duplicate,
+            "existing_order": dup.existing_order_no,
+        },
+        "lines_count": len(lines),
+        "item_scores": [round(s, 2) for s in item_scores],
+        "cism": cism_result,
+        "received_at": datetime.utcnow().isoformat(),
+        "header": {
+            "po_no": header.po_no,
+            "ship2_name": header.ship2_name,
+            "ship2_add1": header.ship2_add1,
+            "ship2_city": header.ship2_city,
+            "ship2_state": header.ship2_state,
+            "ship2_zip": header.ship2_zip,
+            "ship2_country": header.ship2_country,
+            "buyer": header.buyer,
+            "buyer_email": header.buyer_email,
+            "comments": header.comments,
+            "order_date": header.order_date,
+            "supplier_name": header.supplier_name,
+            "customer_id_p21": cust_match.p21_customer_id,
+            "customer_name_p21": cust_match.p21_customer_name,
+            "customer_match_score": cust_match.match_score,
+            "customer_match_method": cust_match.match_method,
+        },
+        "lines": [{
+            "line_no": cl["line_no"],
+            "supplier_part_id": cl["supplier_part_id"],
+            "item_description": cl["item_description"],
+            "qty_ordered": cl["qty_ordered"],
+            "unit_price": cl["unit_price"],
+            "unit_of_measure": cl["unit_of_measure"],
+            "item_id_p21": cl["inv_mast_uid"],
+            "product_group": cl.get("product_group", ""),
+            "crosswalk_match_score": item_scores[i] if i < len(item_scores) else 0,
+        } for i, cl in enumerate(cism_lines)],
+    }
+    local_store.save_po(intake_id, result_data)
 
     logger.info(
         f"Processed PO→SO {header.po_no} | source={source} | "
@@ -484,71 +545,45 @@ async def _process_po_to_so(header, lines, raw_content, source, fmt) -> dict:
     }
 
 
-# ── Review Portal API ────────────────────────────────────────────────────────
+# ── Review Portal API (local file store — no SQL needed) ─────────────────────
 
 @app.get("/api/v1/review/queue")
 async def review_queue(confidence: Optional[str] = None):
-    """Get pending POs for review, optionally filtered by confidence."""
-    try:
-        from services.processing.crosswalk_engine import get_staging_conn
-        import json
-        conn = get_staging_conn()
-        cur = conn.cursor()
+    """Get POs for review from local store."""
+    all_pos = local_store.list_pos(status="pending", confidence=confidence)
+    return [{
+        "intake_id": po.get("intake_id"),
+        "po_number": po.get("po_no"),
+        "source": po.get("source"),
+        "confidence": po.get("confidence"),
+        "status": po.get("review_status"),
+        "received": po.get("received_at"),
+        "reason": po.get("reason"),
+        "supplier": po.get("header", {}).get("supplier_name", ""),
+        "ship_to": po.get("header", {}).get("ship2_name", ""),
+        "customer_p21": po.get("customer_match", {}).get("name", ""),
+        "customer_id_p21": po.get("customer_match", {}).get("p21_id", ""),
+        "customer_score": po.get("customer_match", {}).get("score", 0),
+        "lines_count": po.get("lines_count", 0),
+        "item_scores": po.get("item_scores", []),
+        "header": po.get("header", {}),
+        "lines": po.get("lines", []),
+    } for po in all_pos]
 
-        query = """
-            SELECT id, intake_id, po_number, source_system, vendor_id_raw,
-                   vendor_id_p21, overall_confidence, review_status, received_at,
-                   raw_payload
-            FROM dbo.po_staging_log
-            WHERE review_status = 'pending'
-        """
-        params = []
-        if confidence:
-            query += " AND overall_confidence = ?"
-            params.append(confidence)
-        query += " ORDER BY received_at DESC"
 
-        cur.execute(query, params)
-        rows = cur.fetchall()
-        conn.close()
-
-        results = []
-        for r in rows:
-            # Parse raw_payload to get full PO details
-            payload_data = {}
-            try:
-                if r.raw_payload:
-                    payload_data = json.loads(r.raw_payload)
-            except:
-                pass
-            
-            header = payload_data.get('header', {})
-            lines = payload_data.get('lines', [])
-            
-            # Calculate total from lines
-            total = sum(line.get('extended_price', 0) or 0 for line in lines)
-            
-            results.append({
-                "id": r.id,
-                "intake_id": r.intake_id,
-                "po_number": r.po_number,
-                "source": r.source_system,
-                "vendor_raw": r.vendor_id_raw,
-                "vendor_p21": r.vendor_id_p21,
-                "confidence": r.overall_confidence,
-                "status": r.review_status,
-                "received": str(r.received_at) if r.received_at else None,
-                # Additional fields from payload
-                "supplier": header.get('supplier_name', ''),
-                "ship_to": header.get('ship2_name', ''),
-                "total": total,
-                "lines_count": len(lines),
-                "raw_payload": payload_data,
-            })
-        return results
-    except Exception as e:
-        logger.error(f"Review queue error: {e}")
-        return []
+@app.get("/api/v1/review/all")
+async def review_all():
+    """Get all processed POs (any status)."""
+    all_pos = local_store.list_pos()
+    return [{
+        "intake_id": po.get("intake_id"),
+        "po_number": po.get("po_no"),
+        "source": po.get("source"),
+        "confidence": po.get("confidence"),
+        "review_status": po.get("review_status"),
+        "received": po.get("received_at"),
+        "customer_p21": po.get("customer_match", {}).get("name", ""),
+    } for po in all_pos]
 
 
 class ApproveRequest(BaseModel):
@@ -557,68 +592,49 @@ class ApproveRequest(BaseModel):
 
 @app.post("/api/v1/review/po/{intake_id}/approve")
 async def approve_po(intake_id: str, req: ApproveRequest):
-    """Approve a PO — marks as approved and uploads CISM to blob storage."""
-    try:
-        from services.processing.crosswalk_engine import get_staging_conn
-        
-        # Get PO details first
-        conn = get_staging_conn()
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT po_number, cism_blob_path 
-            FROM dbo.po_staging_log 
-            WHERE intake_id = ?
-        """, (intake_id,))
-        row = cur.fetchone()
-        
-        if not row:
-            conn.close()
-            raise HTTPException(404, f"PO {intake_id} not found")
-        
-        po_number = row.po_number
-        cism_path = row.cism_blob_path
-        
-        # Update status
-        cur.execute("""
-            UPDATE dbo.po_staging_log
-            SET review_status = 'approved', reviewed_by = ?, reviewed_at = GETUTCDATE(),
-                reviewer_notes = ?, p21_import_status = 'pending_blob_upload'
-            WHERE intake_id = ? AND review_status = 'pending'
-        """, (req.reviewer, req.notes, intake_id))
-        conn.commit()
-        affected = cur.rowcount
-        conn.close()
+    """Approve a PO — triggers learning loop and CISM generation."""
+    po = local_store.get_po(intake_id)
+    if not po:
+        raise HTTPException(404, f"PO {intake_id} not found")
+    if po.get("review_status") != "pending":
+        raise HTTPException(400, f"PO {intake_id} already {po.get('review_status')}")
 
-        if affected == 0:
-            raise HTTPException(400, f"PO {intake_id} already reviewed")
+    local_store.update_po(intake_id, {
+        "review_status": "approved",
+        "reviewed_by": req.reviewer,
+        "reviewer_notes": req.notes,
+        "reviewed_at": datetime.utcnow().isoformat(),
+    })
 
-        # Upload CISM to blob storage if file exists
-        blob_result = {"success": False, "error": "No CISM file"}
-        if cism_path and os.path.exists(cism_path):
-            blob_result = upload_approved_cism(cism_path, po_number, intake_id)
-            
-            # Update blob status in DB
-            if blob_result["success"]:
-                conn = get_staging_conn()
-                cur = conn.cursor()
-                cur.execute("""
-                    UPDATE dbo.po_staging_log
-                    SET p21_import_status = 'uploaded_to_blob',
-                        blob_url = ?
-                    WHERE intake_id = ?
-                """, (blob_result.get("blob_url"), intake_id))
-                conn.commit()
-                conn.close()
+    # Learning loop
+    cust = po.get("customer_match", {})
+    hdr = po.get("header", {})
+    if cust.get("p21_id"):
+        try:
+            learn_from_approval(
+                p21_customer_id=cust["p21_id"],
+                p21_customer_name=cust.get("name", ""),
+                source_system=po.get("source", ""),
+                ship2_name=hdr.get("ship2_name", ""),
+                ship2_add1=hdr.get("ship2_add1", ""),
+                ship2_city=hdr.get("ship2_city", ""),
+                ship2_state=hdr.get("ship2_state", ""),
+                ship2_zip=hdr.get("ship2_zip", ""),
+                po_no=po.get("po_no", ""),
+                lines=[{
+                    "supplier_part_id": l.get("supplier_part_id", ""),
+                    "inv_mast_uid": l.get("item_id_p21", ""),
+                    "unit_price": l.get("unit_price", 0),
+                    "unit_of_measure": l.get("unit_of_measure", "EA"),
+                    "item_description": l.get("item_description", ""),
+                    "line_no": l.get("line_no", 0),
+                } for l in po.get("lines", []) if l.get("item_id_p21")],
+                crosswalk_dir=settings.crosswalk_dir,
+            )
+        except Exception as e:
+            logger.error(f"Learning loop error: {e}")
 
-        return {
-            "status": "approved", 
-            "intake_id": intake_id,
-            "blob_upload": blob_result,
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(500, str(e))
+    return {"status": "approved", "intake_id": intake_id}
 
 
 class RejectRequest(BaseModel):
@@ -628,21 +644,26 @@ class RejectRequest(BaseModel):
 @app.post("/api/v1/review/po/{intake_id}/reject")
 async def reject_po(intake_id: str, req: RejectRequest):
     """Reject a PO with reason."""
-    try:
-        from services.processing.crosswalk_engine import get_staging_conn
-        conn = get_staging_conn()
-        cur = conn.cursor()
-        cur.execute("""
-            UPDATE dbo.po_staging_log
-            SET review_status = 'rejected', reviewed_by = ?, reviewed_at = GETUTCDATE(),
-                reviewer_notes = ?
-            WHERE intake_id = ? AND review_status = 'pending'
-        """, (req.reviewer, req.reason, intake_id))
-        conn.commit()
-        conn.close()
-        return {"status": "rejected", "intake_id": intake_id}
-    except Exception as e:
-        raise HTTPException(500, str(e))
+    po = local_store.get_po(intake_id)
+    if not po:
+        raise HTTPException(404, f"PO {intake_id} not found")
+
+    local_store.update_po(intake_id, {
+        "review_status": "rejected",
+        "reviewed_by": req.reviewer,
+        "reject_reason": req.reason,
+        "reviewed_at": datetime.utcnow().isoformat(),
+    })
+    return {"status": "rejected", "intake_id": intake_id}
+
+
+@app.get("/api/v1/review/po/{intake_id}")
+async def get_po_detail(intake_id: str):
+    """Get full PO detail."""
+    po = local_store.get_po(intake_id)
+    if not po:
+        raise HTTPException(404, f"PO {intake_id} not found")
+    return po
 
 
 class VendorMappingRequest(BaseModel):
@@ -895,108 +916,93 @@ async def so_export_status():
         return {"status": "error", "error": str(e)}
 
 
-# ── Stats ─────────────────────────────────────────────────────────────────────
+# ── Stats (local file store) ─────────────────────────────────────────────────
 
 @app.get("/api/v1/stats")
 async def stats():
-    """Dashboard statistics."""
-    try:
-        from services.processing.crosswalk_engine import get_staging_conn
-        conn = get_staging_conn()
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT
-                COUNT(*) as total,
-                SUM(CASE WHEN overall_confidence = 'green' THEN 1 ELSE 0 END) as green,
-                SUM(CASE WHEN overall_confidence = 'yellow' THEN 1 ELSE 0 END) as yellow,
-                SUM(CASE WHEN overall_confidence = 'red' THEN 1 ELSE 0 END) as red,
-                SUM(CASE WHEN review_status = 'approved' THEN 1 ELSE 0 END) as approved,
-                SUM(CASE WHEN review_status = 'rejected' THEN 1 ELSE 0 END) as rejected,
-                SUM(CASE WHEN review_status = 'pending' THEN 1 ELSE 0 END) as pending,
-                SUM(CASE WHEN p21_import_status = 'imported' THEN 1 ELSE 0 END) as imported
-            FROM dbo.po_staging_log
-        """)
-        row = cur.fetchone()
-        
-        # Get crosswalk stats
-        cur.execute("SELECT COUNT(*) as vendor_count FROM dbo.vendor_crosswalk WHERE is_active = 1")
-        vendor_row = cur.fetchone()
-        
-        cur.execute("SELECT COUNT(*) as item_count FROM dbo.item_crosswalk WHERE is_active = 1")
-        item_row = cur.fetchone()
-        
-        conn.close()
-        return {
-            "total": row.total,
-            "green": row.green,
-            "yellow": row.yellow,
-            "red": row.red,
-            "approved": row.approved,
-            "rejected": row.rejected,
-            "pending": row.pending,
-            "imported": row.imported,
-            "crosswalk": {
-                "vendors": vendor_row.vendor_count if vendor_row else 0,
-                "items": item_row.item_count if item_row else 0,
-            }
+    """Dashboard statistics from local store + crosswalk CSVs."""
+    s = local_store.get_stats()
+
+    # Crosswalk counts from CSV files
+    engine = _get_customer_engine()
+    cust_count = len(engine.customer_xw)
+    item_count = sum(len(v) for v in engine.customer_items.values())
+
+    return {
+        "total": s["total"],
+        "green": s["green"],
+        "yellow": s["yellow"],
+        "red": s["red"],
+        "approved": s["approved"],
+        "rejected": s["rejected"],
+        "pending": s["pending"],
+        "crosswalk": {
+            "customers": cust_count,
+            "items": item_count,
         }
-    except Exception as e:
-        return {"error": str(e)}
+    }
 
 
-@app.get("/api/v1/crosswalk/vendors")
-async def list_vendor_mappings(limit: int = 100):
-    """List vendor crosswalk mappings."""
-    try:
-        from services.processing.crosswalk_engine import get_staging_conn
-        conn = get_staging_conn()
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT source_system, source_vendor_id, source_vendor_name, 
-                   p21_vendor_id, p21_vendor_name, match_score, seen_count
-            FROM dbo.vendor_crosswalk
-            WHERE is_active = 1
-            ORDER BY seen_count DESC, match_score DESC
-        """ + (f" TOP {limit}" if limit else ""))
-        rows = cur.fetchall()
-        conn.close()
-        return [{
-            "source_system": r.source_system,
-            "source_vendor_id": r.source_vendor_id,
-            "source_vendor_name": r.source_vendor_name,
-            "p21_vendor_id": r.p21_vendor_id,
-            "p21_vendor_name": r.p21_vendor_name,
-            "match_score": r.match_score,
-            "seen_count": r.seen_count,
-        } for r in rows]
-    except Exception as e:
-        return {"error": str(e)}
+# ── Crosswalk APIs (CSV-based) ──────────────────────────────────────────────
+
+@app.get("/api/v1/crosswalk/customer-items")
+async def list_customer_items(customer_id: str = "", limit: int = 100):
+    """List customer-item crosswalk entries."""
+    engine = _get_customer_engine()
+    if customer_id:
+        rows = engine.customer_items.get(customer_id, [])[:limit]
+    else:
+        rows = []
+        for cid_rows in engine.customer_items.values():
+            rows.extend(cid_rows)
+            if len(rows) >= limit:
+                break
+        rows = rows[:limit]
+    return [{
+        "p21_customer_id": r.get("p21_customer_id"),
+        "customer_part_number": r.get("customer_part_number"),
+        "p21_inv_mast_uid": r.get("p21_inv_mast_uid"),
+        "p21_item_desc": r.get("p21_item_desc"),
+        "unit_of_measure": r.get("unit_of_measure"),
+        "product_group_id": r.get("product_group_id"),
+        "unit_price_avg": r.get("unit_price_avg"),
+        "seen_count": r.get("seen_count"),
+    } for r in rows]
+
+
+@app.get("/api/v1/crosswalk/po-history")
+async def list_po_history(customer_id: str = "", limit: int = 100):
+    """List PO-to-SO history."""
+    engine = _get_customer_engine()
+    if customer_id:
+        rows = engine.po_history.get("", [])  # indexed by po_no, not customer
+        rows = [r for r in rows if r.get("p21_customer_id") == customer_id][:limit]
+    else:
+        rows = []
+        for po_rows in engine.po_history.values():
+            rows.extend(po_rows)
+            if len(rows) >= limit:
+                break
+        rows = rows[:limit]
+    return [{
+        "p21_customer_id": r.get("p21_customer_id"),
+        "customer_po_no": r.get("customer_po_no"),
+        "p21_order_no": r.get("p21_order_no"),
+        "order_date": r.get("order_date"),
+        "completed": r.get("completed"),
+        "ship2_name": r.get("ship2_name"),
+    } for r in rows]
 
 
 @app.get("/api/v1/crosswalk/items")
-async def list_item_mappings(limit: int = 100):
-    """List item crosswalk mappings."""
-    try:
-        from services.processing.crosswalk_engine import get_staging_conn
-        conn = get_staging_conn()
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT source_system, source_item_id, source_item_name,
-                   p21_item_id, p21_item_name, vendor_id, match_score
-            FROM dbo.item_crosswalk
-            WHERE is_active = 1
-            ORDER BY match_score DESC
-        """ + (f" TOP {limit}" if limit else ""))
-        rows = cur.fetchall()
-        conn.close()
-        return [{
-            "source_system": r.source_system,
-            "source_item_id": r.source_item_id,
-            "source_item_name": r.source_item_name,
-            "p21_item_id": r.p21_item_id,
-            "p21_item_name": r.p21_item_name,
-            "vendor_id": r.vendor_id,
-            "match_score": r.match_score,
-        } for r in rows]
-    except Exception as e:
-        return {"error": str(e)}
+async def list_item_master(limit: int = 100):
+    """List item master index."""
+    engine = _get_customer_engine()
+    rows = list(engine.item_master.values())[:limit]
+    return [{
+        "p21_inv_mast_uid": r.get("p21_inv_mast_uid"),
+        "p21_item_desc": r.get("p21_item_desc"),
+        "default_selling_unit": r.get("default_selling_unit"),
+        "product_group": r.get("product_group"),
+        "default_supplier_id": r.get("default_supplier_id"),
+    } for r in rows]

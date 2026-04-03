@@ -8,32 +8,23 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f1117; color: #e0e0e0; }
 a { color: #60a5fa; text-decoration: none; }
-
 .topbar { background: #1a1d27; border-bottom: 1px solid #2a2d3a; padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between; }
 .topbar h1 { font-size: 17px; color: #fff; font-weight: 600; }
 .topbar h1 span { color: #64748b; font-weight: 400; font-size: 13px; margin-left: 8px; }
 .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #4ade80; margin-right: 6px; }
-
-/* Stats */
 .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; padding: 20px 24px; }
 .stat-card { background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 8px; padding: 16px 20px; }
 .stat-card .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; }
 .stat-card .value { font-size: 28px; font-weight: 700; color: #fff; margin-top: 4px; }
 .stat-card .sub { font-size: 12px; color: #475569; margin-top: 2px; }
-
-/* Tabs */
 .tabs { display: flex; gap: 0; padding: 0 24px; border-bottom: 1px solid #2a2d3a; }
 .tab { padding: 12px 20px; font-size: 14px; color: #64748b; cursor: pointer; border-bottom: 2px solid transparent; background: none; border-top: none; border-left: none; border-right: none; }
 .tab:hover { color: #e0e0e0; }
 .tab.active { color: #fff; border-bottom-color: #3b82f6; }
 .tab .badge { background: #334155; color: #94a3b8; padding: 2px 8px; border-radius: 10px; font-size: 11px; margin-left: 6px; }
-
-/* Content */
 .content { padding: 24px; }
 .tab-panel { display: none; }
 .tab-panel.active { display: block; }
-
-/* Queue */
 .queue-layout { display: grid; grid-template-columns: 320px 1fr; gap: 20px; }
 .queue-sidebar { background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 8px; max-height: 600px; overflow-y: auto; }
 .queue-header { padding: 12px 16px; border-bottom: 1px solid #2a2d3a; display: flex; justify-content: space-between; align-items: center; }
@@ -48,8 +39,6 @@ a { color: #60a5fa; text-decoration: none; }
 .po-meta { font-size: 12px; color: #475569; margin-top: 3px; }
 .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
 .dot.green { background: #4ade80; } .dot.yellow { background: #fbbf24; } .dot.red { background: #f87171; }
-
-/* Detail Panel */
 .detail-panel { background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 8px; padding: 24px; }
 .detail-panel h2 { font-size: 20px; margin-bottom: 16px; }
 .badge-conf { display: inline-block; padding: 3px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; margin-left: 8px; }
@@ -61,8 +50,6 @@ a { color: #60a5fa; text-decoration: none; }
 .meta-box .lbl { font-size: 10px; text-transform: uppercase; color: #475569; letter-spacing: 0.5px; }
 .meta-box .val { font-size: 15px; color: #fff; margin-top: 4px; }
 .meta-box .val.warn { color: #f87171; }
-
-/* Lines table */
 table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; }
 th { text-align: left; padding: 8px 10px; color: #475569; font-size: 11px; text-transform: uppercase; border-bottom: 1px solid #2a2d3a; }
 td { padding: 8px 10px; border-bottom: 1px solid #1e2030; }
@@ -71,39 +58,33 @@ tr:hover { background: #141620; }
 .score-pill.hi { background: #0d3320; color: #4ade80; }
 .score-pill.mid { background: #332b00; color: #fbbf24; }
 .score-pill.lo { background: #3b1111; color: #f87171; }
-
-/* Buttons */
 .btn { padding: 8px 20px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; }
 .btn-green { background: #16a34a; color: #fff; } .btn-green:hover { background: #15803d; }
 .btn-red { background: #dc2626; color: #fff; } .btn-red:hover { background: #b91c1c; }
 .btn-gray { background: #334155; color: #e2e8f0; } .btn-gray:hover { background: #475569; }
+.btn-blue { background: #2563eb; color: #fff; } .btn-blue:hover { background: #1d4ed8; }
 .action-bar { display: flex; gap: 10px; margin-top: 16px; padding-top: 16px; border-top: 1px solid #2a2d3a; }
-
-/* Upload */
 .upload-zone { background: #1a1d27; border: 2px dashed #2a2d3a; border-radius: 8px; padding: 40px; text-align: center; max-width: 600px; }
 .upload-zone input[type="file"] { margin: 12px 0; }
 .upload-zone select, .upload-zone input { padding: 8px; background: #141620; color: #e0e0e0; border: 1px solid #2a2d3a; border-radius: 4px; }
-
-/* Crosswalk */
 .xw-section { background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
-.xw-section h3 { font-size: 14px; margin-bottom: 12px; }
-
-/* Pipeline */
-.pipe-step { background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 8px; padding: 16px 20px; margin-bottom: 12px; display: flex; align-items: center; gap: 16px; }
-.pipe-num { width: 32px; height: 32px; border-radius: 50%; background: #3b82f6; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; }
+.xw-section h3 { font-size: 14px; margin-bottom: 8px; }
+.xw-section .desc { color: #64748b; font-size: 13px; margin-bottom: 12px; }
+.xw-section .count { color: #4ade80; font-weight: 600; }
+.pipe-step { background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 8px; padding: 16px 20px; margin-bottom: 12px; display: flex; align-items: flex-start; gap: 16px; }
+.pipe-num { min-width: 32px; height: 32px; border-radius: 50%; background: #3b82f6; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; margin-top: 2px; }
 .pipe-step .pipe-title { font-weight: 600; font-size: 14px; color: #fff; }
-.pipe-step .pipe-desc { font-size: 12px; color: #64748b; margin-top: 2px; }
-
-.empty { text-align: center; padding: 60px; color: #475569; }
+.pipe-step .pipe-desc { font-size: 12px; color: #94a3b8; margin-top: 4px; line-height: 1.5; }
+.pipe-step .pipe-desc b { color: #4ade80; }
+.empty { text-align: center; padding: 40px; color: #475569; }
+.scroll-table { max-height: 400px; overflow-y: auto; }
 </style>
 </head>
 <body>
-
 <div class="topbar">
   <h1>EnPro PO Agent <span>v3.0 — Customer Crosswalk</span></h1>
   <div><span class="status-dot"></span> Online</div>
 </div>
-
 <div class="stats" id="statsRow">
   <div class="stat-card"><div class="label">Total Processed</div><div class="value" id="sTotal">-</div><div class="sub">all time</div></div>
   <div class="stat-card"><div class="label">Auto-Approved</div><div class="value" id="sGreen">-</div><div class="sub">green confidence</div></div>
@@ -111,107 +92,113 @@ tr:hover { background: #141620; }
   <div class="stat-card"><div class="label">Customers Mapped</div><div class="value" id="sCustXW">-</div><div class="sub">crosswalk entries</div></div>
   <div class="stat-card"><div class="label">Item Coverage</div><div class="value" id="sItemXW">-</div><div class="sub">customer-item pairs</div></div>
 </div>
-
 <div class="tabs">
   <button class="tab active" onclick="showTab('queue')">Review Queue <span class="badge" id="queueBadge">0</span></button>
   <button class="tab" onclick="showTab('upload')">Upload PO</button>
   <button class="tab" onclick="showTab('crosswalk')">Crosswalk</button>
   <button class="tab" onclick="showTab('pipeline')">Pipeline</button>
 </div>
-
 <div class="content">
 
-  <!-- REVIEW QUEUE -->
-  <div class="tab-panel active" id="panel-queue">
-    <div class="queue-layout">
-      <div class="queue-sidebar">
-        <div class="queue-header">
-          <h3>Exception Queue</h3>
-          <div class="filter-pills">
-            <button class="pill active" onclick="filterQ('all')">All</button>
-            <button class="pill" onclick="filterQ('yellow')">Yellow</button>
-            <button class="pill" onclick="filterQ('red')">Red</button>
-          </div>
-        </div>
-        <div id="poList"><div class="empty" style="padding:30px;">No POs pending review. Pipeline is fully automated.</div></div>
-      </div>
-      <div class="detail-panel" id="detailPanel">
-        <div class="empty">Select a PO from the queue to review</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- UPLOAD PO -->
-  <div class="tab-panel" id="panel-upload">
-    <div class="upload-zone">
-      <h3 style="margin-bottom:12px;">Upload PO for Processing</h3>
-      <p style="color:#64748b; font-size:13px; margin-bottom:16px;">Upload a cXML or PDF purchase order to process through the customer crosswalk pipeline.</p>
-      <input type="file" id="fileUpload" accept=".xml,.pdf"><br>
-      <select id="uploadSource" style="margin-top:8px;">
-        <option value="ariba">Ariba</option>
-        <option value="coupa">Coupa</option>
-        <option value="direct">Direct</option>
-      </select>
-      <button class="btn btn-green" onclick="uploadFile()" style="margin-left:8px;">Process</button>
-      <div id="uploadResult" style="margin-top:16px;"></div>
-    </div>
-  </div>
-
-  <!-- CROSSWALK -->
-  <div class="tab-panel" id="panel-crosswalk">
-    <div class="xw-section">
-      <h3>Seed Crosswalk from P21 Data</h3>
-      <p style="color:#64748b; font-size:13px; margin-bottom:12px;">Upload the 3 P21 CSV exports (SO Headers, SO Lines, Customers), then click Build to generate crosswalk tables.</p>
-      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:12px;">
-        <div>
-          <label style="font-size:11px; color:#64748b; text-transform:uppercase;">SO Headers CSV</label><br>
-          <input type="file" id="xwHeaders" accept=".csv" style="margin-top:4px;">
-          <div id="xwHeadersStatus" style="font-size:11px; color:#475569; margin-top:4px;"></div>
-        </div>
-        <div>
-          <label style="font-size:11px; color:#64748b; text-transform:uppercase;">SO Lines CSV</label><br>
-          <input type="file" id="xwLines" accept=".csv" style="margin-top:4px;">
-          <div id="xwLinesStatus" style="font-size:11px; color:#475569; margin-top:4px;"></div>
-        </div>
-        <div>
-          <label style="font-size:11px; color:#64748b; text-transform:uppercase;">Customers CSV</label><br>
-          <input type="file" id="xwCustomers" accept=".csv" style="margin-top:4px;">
-          <div id="xwCustomersStatus" style="font-size:11px; color:#475569; margin-top:4px;"></div>
+<!-- REVIEW QUEUE -->
+<div class="tab-panel active" id="panel-queue">
+  <div class="queue-layout">
+    <div class="queue-sidebar">
+      <div class="queue-header">
+        <h3>Exception Queue</h3>
+        <div class="filter-pills">
+          <button class="pill active" onclick="filterQ('all')">All</button>
+          <button class="pill" onclick="filterQ('yellow')">Yellow</button>
+          <button class="pill" onclick="filterQ('red')">Red</button>
         </div>
       </div>
-      <button class="btn btn-green" onclick="uploadAndBuildXW()" id="buildBtn">Upload & Build Crosswalk</button>
-      <div id="buildResult" style="margin-top:12px;"></div>
+      <div id="poList"><div class="empty" style="padding:30px;">Loading...</div></div>
     </div>
-    <div class="xw-section">
-      <h3>Customer Crosswalk</h3>
-      <p style="color:#64748b; font-size:13px; margin-bottom:12px;">Maps Ariba/Coupa ship-to names to P21 customer IDs. Learns from every approved PO.</p>
-      <table id="custXWTable">
-        <tr><th>P21 Customer ID</th><th>Customer Name</th><th>Ship-To Name</th><th>Ship-To Zip</th><th>Source</th><th>Method</th><th>Seen</th></tr>
-      </table>
-      <div id="custXWEmpty" class="empty" style="padding:20px;">No crosswalk data yet. Upload P21 CSVs above to seed.</div>
+    <div class="detail-panel" id="detailPanel">
+      <div class="empty">Select a PO from the queue to review</div>
     </div>
-    <div class="xw-section">
-      <h3>Customer-Item Crosswalk</h3>
-      <p style="color:#64748b; font-size:13px; margin-bottom:12px;">Maps customer part numbers to P21 items (inv_mast_uid). Seeded from SO lines.</p>
-      <div class="empty" style="padding:20px;">Item crosswalk populates after build.</div>
+  </div>
+</div>
+
+<!-- UPLOAD PO -->
+<div class="tab-panel" id="panel-upload">
+  <div class="upload-zone">
+    <h3 style="margin-bottom:12px;">Upload PO for Processing</h3>
+    <p style="color:#64748b; font-size:13px; margin-bottom:16px;">Upload a cXML, PDF, or CSV purchase order. The agent will match the customer and items against the P21 crosswalk.</p>
+    <input type="file" id="fileUpload" accept=".xml,.pdf,.csv"><br>
+    <select id="uploadSource" style="margin-top:8px;">
+      <option value="ariba">Ariba</option>
+      <option value="coupa">Coupa</option>
+      <option value="direct">Direct / Email</option>
+    </select>
+    <button class="btn btn-green" onclick="uploadFile()" style="margin-left:8px;">Process</button>
+    <div id="uploadResult" style="margin-top:16px;"></div>
+  </div>
+</div>
+
+<!-- CROSSWALK -->
+<div class="tab-panel" id="panel-crosswalk">
+  <div class="xw-section">
+    <h3>Seed Crosswalk from P21 Data</h3>
+    <p class="desc">Upload the 3 P21 CSV exports, then click Build. This generates all crosswalk tables.</p>
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:12px;">
+      <div><label style="font-size:11px; color:#64748b; text-transform:uppercase;">SO Headers CSV</label><br><input type="file" id="xwHeaders" accept=".csv" style="margin-top:4px;"><div id="xwHeadersStatus" style="font-size:11px; color:#475569; margin-top:4px;"></div></div>
+      <div><label style="font-size:11px; color:#64748b; text-transform:uppercase;">SO Lines CSV</label><br><input type="file" id="xwLines" accept=".csv" style="margin-top:4px;"><div id="xwLinesStatus" style="font-size:11px; color:#475569; margin-top:4px;"></div></div>
+      <div><label style="font-size:11px; color:#64748b; text-transform:uppercase;">Customers CSV</label><br><input type="file" id="xwCustomers" accept=".csv" style="margin-top:4px;"><div id="xwCustomersStatus" style="font-size:11px; color:#475569; margin-top:4px;"></div></div>
     </div>
+    <button class="btn btn-green" onclick="uploadAndBuildXW()" id="buildBtn">Upload & Build Crosswalk</button>
+    <div id="buildResult" style="margin-top:12px;"></div>
   </div>
 
-  <!-- PIPELINE -->
-  <div class="tab-panel" id="panel-pipeline">
-    <h3 style="margin-bottom:16px;">PO-to-SO Processing Pipeline</h3>
-    <div class="pipe-step"><div class="pipe-num">1</div><div><div class="pipe-title">Email Intake</div><div class="pipe-desc">Poll orders@enproinc.com via Microsoft Graph API. Classify source (Ariba/Coupa) from sender domain + cXML headers.</div></div></div>
-    <div class="pipe-step"><div class="pipe-num">2</div><div><div class="pipe-title">Parse PO</div><div class="pipe-desc">Extract header + lines from cXML OrderRequest or PDF via Azure Document Intelligence.</div></div></div>
-    <div class="pipe-step"><div class="pipe-num">3</div><div><div class="pipe-title">Customer Match</div><div class="pipe-desc">Match ship-to name + zip to P21 customer_id using crosswalk. Fuzzy fallback with Jaccard + Levenshtein.</div></div></div>
-    <div class="pipe-step"><div class="pipe-num">4</div><div><div class="pipe-title">Item Match</div><div class="pipe-desc">Match each line's supplier_part_id to P21 inv_mast_uid via customer_part_number crosswalk (100% populated from oe_line).</div></div></div>
-    <div class="pipe-step"><div class="pipe-num">5</div><div><div class="pipe-title">Confidence Score</div><div class="pipe-desc">4-dimension scoring: customer (0.30) + ship-to (0.15) + items (0.45) + dedup (0.10). Green/Yellow/Red.</div></div></div>
-    <div class="pipe-step"><div class="pipe-num">6</div><div><div class="pipe-title">CISM SO Generation</div><div class="pipe-desc">Generate P21 Order/Quote Import CSV (header + lines) matching the CISM batch schema. Green = auto-stage.</div></div></div>
-    <div class="pipe-step"><div class="pipe-num">7</div><div><div class="pipe-title">Learning Loop</div><div class="pipe-desc">When Brittany approves a PO (or it auto-approves as green), the system saves what it learned:<br>
-      <span style="color:#4ade80;">Customer:</span> "Ship-to name 'Waupaca Foundry' at zip 47586 = P21 customer 208672" — next time this customer sends a PO, instant match.<br>
-      <span style="color:#4ade80;">Items:</span> "Customer 208672's part# PH0260 = P21 inv_mast_uid 7931" — every line item match gets remembered per customer.<br>
-      <span style="color:#4ade80;">PO Link:</span> "PO# 4500867075 belongs to customer 208672" — detects duplicates and confirms customer identity.<br>
-      <span style="color:#64748b;">Result: The more POs processed, the fewer go to review. Day 1 = mostly yellow/red. Month 1 = mostly green.</span></div></div></div>
+  <div class="xw-section">
+    <h3>Customer Crosswalk <span class="count" id="xwCustCount"></span></h3>
+    <p class="desc">Maps ship-to names + zip codes to P21 customer IDs. Learns from every approved PO.</p>
+    <div class="scroll-table"><table id="custXWTable"><tr><th>P21 ID</th><th>Customer Name</th><th>Ship-To</th><th>Zip</th><th>Source</th><th>Method</th><th>Orders</th></tr></table></div>
+    <div id="custXWEmpty" class="empty" style="padding:20px;">Build crosswalk to populate</div>
   </div>
+
+  <div class="xw-section">
+    <h3>Customer-Item Crosswalk <span class="count" id="xwItemCount"></span></h3>
+    <p class="desc">Maps each customer's part numbers to P21 items (inv_mast_uid). This is the core matching table.</p>
+    <div class="scroll-table"><table id="itemXWTable"><tr><th>Customer ID</th><th>Customer Part #</th><th>P21 Item UID</th><th>Description</th><th>UOM</th><th>Avg Price</th><th>Orders</th></tr></table></div>
+    <div id="itemXWEmpty" class="empty" style="padding:20px;">Build crosswalk to populate</div>
+  </div>
+
+  <div class="xw-section">
+    <h3>PO History <span class="count" id="xwPOCount"></span></h3>
+    <p class="desc">Links customer PO numbers to P21 Sales Order numbers. Used for duplicate detection.</p>
+    <div class="scroll-table"><table id="poHistTable"><tr><th>Customer ID</th><th>Customer PO #</th><th>P21 SO #</th><th>Order Date</th><th>Ship-To</th><th>Status</th></tr></table></div>
+    <div id="poHistEmpty" class="empty" style="padding:20px;">Build crosswalk to populate</div>
+  </div>
+
+  <div class="xw-section">
+    <h3>Item Master <span class="count" id="xwMasterCount"></span></h3>
+    <p class="desc">P21 inventory items — fallback matching when customer-specific part# lookup fails.</p>
+    <div class="scroll-table"><table id="masterTable"><tr><th>UID</th><th>Description</th><th>UOM</th><th>Product Group</th><th>Supplier</th></tr></table></div>
+    <div id="masterEmpty" class="empty" style="padding:20px;">Build crosswalk to populate</div>
+  </div>
+</div>
+
+<!-- PIPELINE -->
+<div class="tab-panel" id="panel-pipeline">
+  <h3 style="margin-bottom:16px;">PO-to-SO Processing Pipeline</h3>
+  <div class="pipe-step"><div class="pipe-num">1</div><div><div class="pipe-title">Email Intake</div><div class="pipe-desc">Customers send POs to <b>orders@enproinc.com</b> as email with <b>PDF attachment</b>. The agent polls this inbox via Microsoft Graph API. Ariba and Coupa POs also arrive here, sometimes as cXML attachments.</div></div></div>
+  <div class="pipe-step"><div class="pipe-num">2</div><div><div class="pipe-title">Parse PO</div><div class="pipe-desc"><b>PDF:</b> Azure Document Intelligence extracts PO#, ship-to, line items, quantities, prices from the PDF.<br><b>cXML:</b> Native XML parsing for Ariba/Coupa OrderRequest format.<br><b>CSV:</b> Direct column mapping for structured imports.</div></div></div>
+  <div class="pipe-step"><div class="pipe-num">3</div><div><div class="pipe-title">Customer Match</div><div class="pipe-desc">Match the ship-to name + zip code to a P21 customer_id using the <b>Customer Crosswalk</b> (4,880 entries). Priority: learned exact match > name+zip exact > fuzzy address > PO# pattern.</div></div></div>
+  <div class="pipe-step"><div class="pipe-num">4</div><div><div class="pipe-title">Item Match</div><div class="pipe-desc">For each line item, match the customer's part number to a P21 item using the <b>Customer-Item Crosswalk</b> (22,675 entries). This table maps what each specific customer calls their parts to EnPro's P21 item IDs.</div></div></div>
+  <div class="pipe-step"><div class="pipe-num">5</div><div><div class="pipe-title">Confidence Score</div><div class="pipe-desc">4-dimension scoring:<br>
+    <b>Customer (30%)</b> — did we identify who this is?<br>
+    <b>Ship-to (15%)</b> — do we know this delivery address?<br>
+    <b>Items (45%)</b> — did every line item match a P21 product?<br>
+    <b>Duplicate (10%)</b> — is this a new PO or a re-send?<br>
+    <span style="color:#4ade80;">GREEN = auto-approve</span> | <span style="color:#fbbf24;">YELLOW = Brittany reviews</span> | <span style="color:#f87171;">RED = manual entry needed</span></div></div></div>
+  <div class="pipe-step"><div class="pipe-num">6</div><div><div class="pipe-title">CISM SO Generation</div><div class="pipe-desc">For green/yellow POs, generate a <b>P21 Order/Quote Import CSV</b> matching the CISM batch schema (orderquoteheader + orderquoteline format). This CSV gets picked up by P21's scheduled import job to create the Sales Order.</div></div></div>
+  <div class="pipe-step"><div class="pipe-num">7</div><div><div class="pipe-title">Learning Loop</div><div class="pipe-desc">Every time a PO is approved (automatically or by Brittany), the system remembers:<br>
+    <b>Customer:</b> "Ship-to 'Waupaca Foundry' at zip 47586 = P21 customer 208672" — instant match next time.<br>
+    <b>Items:</b> "Customer 208672 calls part PH0260 = P21 inv_mast_uid 7931" — remembered per customer.<br>
+    <b>PO Link:</b> "PO# 4500867075 = customer 208672" — catches duplicates, confirms identity.<br>
+    <span style="color:#64748b;">Day 1: mostly yellow/red (learning). Month 1: mostly green (automated).</span></div></div></div>
+</div>
 
 </div>
 
@@ -225,8 +212,8 @@ function showTab(name) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.getElementById('panel-' + name).classList.add('active');
-  event.target.closest('.tab').classList.add('active');
-  if (name === 'crosswalk') loadCustXW();
+  event.target.closest('.tab')?.classList.add('active');
+  if (name === 'crosswalk') loadAllXW();
 }
 
 async function loadStats() {
@@ -236,7 +223,7 @@ async function loadStats() {
     document.getElementById('sTotal').textContent = d.total || 0;
     document.getElementById('sGreen').textContent = d.green || 0;
     document.getElementById('sPending').textContent = d.pending || 0;
-    document.getElementById('sCustXW').textContent = d.crosswalk?.vendors || 0;
+    document.getElementById('sCustXW').textContent = d.crosswalk?.customers || 0;
     document.getElementById('sItemXW').textContent = d.crosswalk?.items || 0;
     document.getElementById('queueBadge').textContent = d.pending || 0;
   } catch(e) { console.error('Stats:', e); }
@@ -245,10 +232,9 @@ async function loadStats() {
 async function loadQueue(filter) {
   try {
     const url = filter && filter !== 'all' ? `${API}/api/v1/review/queue?confidence=${filter}` : `${API}/api/v1/review/queue`;
-    const r = await fetch(url);
-    queue = await r.json();
+    queue = await (await fetch(url)).json();
     renderQueue();
-  } catch(e) { document.getElementById('poList').innerHTML = '<div class="empty" style="padding:20px;">Error loading queue</div>'; }
+  } catch(e) { document.getElementById('poList').innerHTML = '<div class="empty" style="padding:20px;">Error loading</div>'; }
 }
 
 function renderQueue() {
@@ -256,8 +242,8 @@ function renderQueue() {
   if (!queue.length) { el.innerHTML = '<div class="empty" style="padding:30px;">No POs pending review. Pipeline is fully automated.</div>'; return; }
   el.innerHTML = queue.map(po => `
     <div class="po-item ${selectedId === po.intake_id ? 'selected' : ''}" onclick="selectPO('${po.intake_id}')">
-      <div><span class="dot ${po.confidence}"></span><span class="po-num">${po.po_number || 'Unknown PO'}</span></div>
-      <div class="po-meta">${po.source || ''} &middot; ${po.supplier || po.vendor_raw || 'Unknown'} &middot; ${po.received ? new Date(po.received).toLocaleDateString() : ''}</div>
+      <div><span class="dot ${po.confidence}"></span><span class="po-num">${po.po_number || 'Unknown'}</span></div>
+      <div class="po-meta">${po.source || ''} | ${po.customer_p21 || po.ship_to || 'Unknown customer'} | ${po.received ? new Date(po.received).toLocaleDateString() : ''}</div>
     </div>
   `).join('');
 }
@@ -267,19 +253,18 @@ function selectPO(id) {
   renderQueue();
   const po = queue.find(p => p.intake_id === id);
   if (!po) return;
+  const h = po.header || {};
+  const lines = po.lines || [];
+  const cm = po.customer_match || {};
 
-  const payload = po.raw_payload || {};
-  const header = payload.header || {};
-  const lines = payload.lines || [];
-
-  const panel = document.getElementById('detailPanel');
-  panel.innerHTML = `
+  document.getElementById('detailPanel').innerHTML = `
     <h2>PO ${po.po_number || '?'} <span class="badge-conf ${po.confidence}">${(po.confidence||'').toUpperCase()}</span></h2>
+    <div style="color:#94a3b8; font-size:13px; margin-bottom:12px;">${po.reason || ''}</div>
     <div class="meta-grid">
-      <div class="meta-box"><div class="lbl">Customer (Ship-To)</div><div class="val">${header.ship2_name || po.supplier || '-'}</div></div>
-      <div class="meta-box"><div class="lbl">P21 Customer ID</div><div class="val ${header.customer_id_p21 ? '' : 'warn'}">${header.customer_id_p21 || 'NOT MATCHED'}</div></div>
-      <div class="meta-box"><div class="lbl">Match Method</div><div class="val">${header.customer_match_method || '-'} (${(header.customer_match_score||0).toFixed ? (header.customer_match_score||0).toFixed(2) : '-'})</div></div>
-      <div class="meta-box"><div class="lbl">Ship-To Address</div><div class="val">${header.ship2_add1 || ''}, ${header.ship2_city || ''} ${header.ship2_state || ''} ${header.ship2_zip || ''}</div></div>
+      <div class="meta-box"><div class="lbl">Customer (Ship-To)</div><div class="val">${h.ship2_name || po.ship_to || '-'}</div></div>
+      <div class="meta-box"><div class="lbl">P21 Customer</div><div class="val ${h.customer_id_p21 ? '' : 'warn'}">${h.customer_name_p21 || 'NOT MATCHED'} ${h.customer_id_p21 ? '('+h.customer_id_p21+')' : ''}</div></div>
+      <div class="meta-box"><div class="lbl">Match</div><div class="val">${h.customer_match_method || '-'} (${(h.customer_match_score||0).toFixed?.(2) || '0'})</div></div>
+      <div class="meta-box"><div class="lbl">Address</div><div class="val">${h.ship2_add1 || ''}, ${h.ship2_city || ''} ${h.ship2_state || ''} ${h.ship2_zip || ''}</div></div>
       <div class="meta-box"><div class="lbl">Source</div><div class="val">${po.source || '-'}</div></div>
       <div class="meta-box"><div class="lbl">Received</div><div class="val">${po.received ? new Date(po.received).toLocaleString() : '-'}</div></div>
     </div>
@@ -291,15 +276,15 @@ function selectPO(id) {
         <td>${l.supplier_part_id || '-'}</td>
         <td>${(l.item_description||'').substring(0,40)}</td>
         <td>${l.qty_ordered || 0}</td>
-        <td>$${(l.unit_price||0).toFixed ? (l.unit_price||0).toFixed(2) : '0.00'}</td>
+        <td>$${(l.unit_price||0).toFixed?.(2) || '0.00'}</td>
         <td>${l.item_id_p21 || '<span style="color:#f87171">UNMAPPED</span>'}</td>
         <td><span class="score-pill ${(l.crosswalk_match_score||0) >= 0.9 ? 'hi' : (l.crosswalk_match_score||0) >= 0.6 ? 'mid' : 'lo'}">${((l.crosswalk_match_score||0)*100).toFixed(0)}%</span></td>
       </tr>`).join('')}
     </table>
     <div class="action-bar">
       <button class="btn btn-green" onclick="approvePO('${po.intake_id}')">Approve & Create SO</button>
+      <button class="btn btn-blue" onclick="editPO('${po.intake_id}')">Edit PO</button>
       <button class="btn btn-red" onclick="rejectPO('${po.intake_id}')">Reject</button>
-      <button class="btn btn-gray" onclick="editMapping('${po.intake_id}')">Edit Mapping</button>
     </div>
   `;
 }
@@ -308,9 +293,11 @@ async function approvePO(id) {
   const reviewer = prompt('Reviewer name:', 'Brittany');
   if (!reviewer) return;
   try {
-    await fetch(`${API}/api/v1/review/po/${id}/approve`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({reviewer, notes:''}) });
-    alert('Approved! CISM SO file will be generated.');
+    await fetch(`${API}/api/v1/review/po/${id}/approve`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({reviewer, notes:''}) });
+    alert('Approved! Learning loop saved mappings. CISM SO file generated.');
     loadQueue(currentFilter); loadStats();
+    selectedId = null;
+    document.getElementById('detailPanel').innerHTML = '<div class="empty">Select a PO from the queue to review</div>';
   } catch(e) { alert('Error: ' + e.message); }
 }
 
@@ -318,13 +305,17 @@ async function rejectPO(id) {
   const reason = prompt('Rejection reason:');
   if (!reason) return;
   try {
-    await fetch(`${API}/api/v1/review/po/${id}/reject`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({reviewer:'reviewer', reason}) });
+    await fetch(`${API}/api/v1/review/po/${id}/reject`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({reviewer:'reviewer', reason}) });
     alert('Rejected.');
     loadQueue(currentFilter); loadStats();
+    selectedId = null;
+    document.getElementById('detailPanel').innerHTML = '<div class="empty">Select a PO from the queue to review</div>';
   } catch(e) { alert('Error: ' + e.message); }
 }
 
-function editMapping(id) { alert('Mapping editor coming soon. Use API:\nPOST /api/v1/review/crosswalk/customer\nPOST /api/v1/review/crosswalk/item'); }
+function editPO(id) {
+  alert('Edit PO — coming next. This will let you:\n\n1. Change the matched P21 customer\n2. Remap individual line items to different P21 products\n3. Edit quantities, prices, ship-to\n4. Add notes for the warehouse\n\nFor now, approve or reject from here.');
+}
 
 function filterQ(f) {
   currentFilter = f;
@@ -341,99 +332,115 @@ async function uploadFile() {
   fd.append('file', fi.files[0]);
   fd.append('source', src);
   try {
-    const r = await fetch(`${API}/api/v1/intake/upload`, {method:'POST', body:fd});
-    const d = await r.json();
+    const d = await (await fetch(`${API}/api/v1/intake/upload`, {method:'POST', body:fd})).json();
     document.getElementById('uploadResult').innerHTML = `
-      <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:8px; padding:16px; margin-top:12px;">
-        <strong>PO ${d.po_no || '?'}</strong> processed<br>
-        Confidence: <span class="badge-conf ${d.confidence}">${(d.confidence||'').toUpperCase()}</span><br>
-        Customer: ${d.customer_match?.name || 'Not matched'} (${d.customer_match?.method || '-'}, ${(d.customer_match?.score||0).toFixed(2)})<br>
-        Lines: ${d.lines || 0} | Review: ${d.review_required ? 'Yes' : 'No'}
+      <div style="background:#1a1d27; border:1px solid #2a2d3a; border-radius:8px; padding:16px;">
+        <strong>PO ${d.po_no || '?'}</strong><br>
+        Confidence: <span class="badge-conf ${d.confidence}">${(d.confidence||'').toUpperCase()}</span> — ${d.reason || ''}<br>
+        Customer: ${d.customer_match?.name || 'Not matched'} (${d.customer_match?.method || '-'}, score ${(d.customer_match?.score||0).toFixed(2)})<br>
+        Lines: ${d.lines || 0} | Scores: ${(d.item_scores||[]).map(s=>(s*100).toFixed(0)+'%').join(', ')}<br>
+        ${d.review_required ? '<span style="color:#fbbf24;">Queued for review</span>' : '<span style="color:#4ade80;">Auto-approved + CISM generated</span>'}
       </div>`;
     loadQueue(currentFilter); loadStats();
     fi.value = '';
-  } catch(e) { alert('Upload error: ' + e.message); }
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+// Crosswalk loading
+async function loadAllXW() { loadCustXW(); loadItemXW(); loadPOHist(); loadMaster(); }
+
+async function loadCustXW() {
+  try {
+    const data = await (await fetch(`${API}/api/v1/crosswalk/customers?limit=100`)).json();
+    const tbl = document.getElementById('custXWTable');
+    const empty = document.getElementById('custXWEmpty');
+    document.getElementById('xwCustCount').textContent = `(${data.length}+ entries)`;
+    if (data.length) {
+      empty.style.display='none'; tbl.style.display='table';
+      tbl.innerHTML = '<tr><th>P21 ID</th><th>Customer</th><th>Ship-To</th><th>Zip</th><th>Source</th><th>Method</th><th>Orders</th></tr>' +
+        data.map(r => `<tr><td>${r.p21_customer_id||''}</td><td>${r.p21_customer_name||''}</td><td>${r.ship2_name||''}</td><td>${r.ship2_zip||''}</td><td>${r.source_system||''}</td><td>${r.match_method||''}</td><td>${r.seen_count||''}</td></tr>`).join('');
+    } else { empty.style.display='block'; tbl.style.display='none'; }
+  } catch(e) { console.error(e); }
+}
+
+async function loadItemXW() {
+  try {
+    const data = await (await fetch(`${API}/api/v1/crosswalk/customer-items?limit=100`)).json();
+    const tbl = document.getElementById('itemXWTable');
+    const empty = document.getElementById('itemXWEmpty');
+    document.getElementById('xwItemCount').textContent = `(${data.length}+ entries)`;
+    if (data.length) {
+      empty.style.display='none'; tbl.style.display='table';
+      tbl.innerHTML = '<tr><th>Customer</th><th>Part #</th><th>P21 UID</th><th>Description</th><th>UOM</th><th>Avg $</th><th>Orders</th></tr>' +
+        data.map(r => `<tr><td>${r.p21_customer_id||''}</td><td>${r.customer_part_number||''}</td><td>${r.p21_inv_mast_uid||''}</td><td>${(r.p21_item_desc||'').substring(0,30)}</td><td>${r.unit_of_measure||''}</td><td>${r.unit_price_avg||''}</td><td>${r.seen_count||''}</td></tr>`).join('');
+    } else { empty.style.display='block'; tbl.style.display='none'; }
+  } catch(e) { console.error(e); }
+}
+
+async function loadPOHist() {
+  try {
+    const data = await (await fetch(`${API}/api/v1/crosswalk/po-history?limit=100`)).json();
+    const tbl = document.getElementById('poHistTable');
+    const empty = document.getElementById('poHistEmpty');
+    document.getElementById('xwPOCount').textContent = `(${data.length}+ entries)`;
+    if (data.length) {
+      empty.style.display='none'; tbl.style.display='table';
+      tbl.innerHTML = '<tr><th>Customer</th><th>PO #</th><th>P21 SO #</th><th>Date</th><th>Ship-To</th><th>Status</th></tr>' +
+        data.map(r => `<tr><td>${r.p21_customer_id||''}</td><td>${r.customer_po_no||''}</td><td>${r.p21_order_no||''}</td><td>${(r.order_date||'').substring(0,10)}</td><td>${(r.ship2_name||'').substring(0,25)}</td><td>${r.completed==='Y'?'Complete':'Open'}</td></tr>`).join('');
+    } else { empty.style.display='block'; tbl.style.display='none'; }
+  } catch(e) { console.error(e); }
+}
+
+async function loadMaster() {
+  try {
+    const data = await (await fetch(`${API}/api/v1/crosswalk/items?limit=100`)).json();
+    const tbl = document.getElementById('masterTable');
+    const empty = document.getElementById('masterEmpty');
+    document.getElementById('xwMasterCount').textContent = `(${data.length}+ entries)`;
+    if (data.length) {
+      empty.style.display='none'; tbl.style.display='table';
+      tbl.innerHTML = '<tr><th>UID</th><th>Description</th><th>UOM</th><th>Group</th><th>Supplier</th></tr>' +
+        data.map(r => `<tr><td>${r.p21_inv_mast_uid||''}</td><td>${(r.p21_item_desc||'').substring(0,40)}</td><td>${r.default_selling_unit||''}</td><td>${r.product_group||''}</td><td>${r.default_supplier_id||''}</td></tr>`).join('');
+    } else { empty.style.display='block'; tbl.style.display='none'; }
+  } catch(e) { console.error(e); }
 }
 
 async function uploadAndBuildXW() {
   const hdr = document.getElementById('xwHeaders');
   const lin = document.getElementById('xwLines');
   const cst = document.getElementById('xwCustomers');
-  if (!hdr.files.length || !lin.files.length || !cst.files.length) {
-    alert('Please select all 3 CSV files (SO Headers, SO Lines, Customers)');
-    return;
-  }
+  if (!hdr.files.length || !lin.files.length || !cst.files.length) { alert('Select all 3 CSVs'); return; }
   const btn = document.getElementById('buildBtn');
   const result = document.getElementById('buildResult');
-  btn.disabled = true;
-  btn.textContent = 'Uploading...';
+  btn.disabled = true; btn.textContent = 'Uploading...';
   result.innerHTML = '<div style="color:#64748b;">Uploading CSVs...</div>';
-
   try {
-    // Upload each file
     for (const [input, type] of [[hdr,'headers'],[lin,'lines'],[cst,'customers']]) {
-      const fd = new FormData();
-      fd.append('file', input.files[0]);
-      fd.append('file_type', type);
+      const fd = new FormData(); fd.append('file', input.files[0]); fd.append('file_type', type);
       const r = await fetch(`${API}/api/v1/crosswalk/upload`, {method:'POST', body:fd});
-      if (!r.ok) throw new Error(`Upload ${type} failed: ${r.status}`);
+      if (!r.ok) throw new Error(`Upload ${type} failed`);
       const d = await r.json();
       document.getElementById('xw' + type.charAt(0).toUpperCase() + type.slice(1) + 'Status').textContent = `Uploaded (${(d.size/1024).toFixed(0)} KB)`;
     }
-
-    // Trigger build (runs in background)
-    btn.textContent = 'Building crosswalks...';
-    result.innerHTML = '<div style="color:#fbbf24;">Building crosswalk tables from P21 data (this may take a minute)...</div>';
-    const br = await fetch(`${API}/api/v1/crosswalk/build`, {method:'POST', headers:{'Content-Type':'application/json'}});
-    if (!br.ok) { const err = await br.json(); throw new Error(err.detail || 'Build failed'); }
-
-    // Poll for completion
+    btn.textContent = 'Building...';
+    result.innerHTML = '<div style="color:#fbbf24;">Building crosswalk tables...</div>';
+    await fetch(`${API}/api/v1/crosswalk/build`, {method:'POST', headers:{'Content-Type':'application/json'}});
     let tries = 0;
     while (tries < 120) {
       await new Promise(r => setTimeout(r, 2000));
-      const sr = await fetch(`${API}/api/v1/crosswalk/build/status`);
-      const sd = await sr.json();
+      const sd = await (await fetch(`${API}/api/v1/crosswalk/build/status`)).json();
       if (sd.state === 'done') {
-        let filesHtml = '';
-        if (sd.result?.files) {
-          filesHtml = Object.entries(sd.result.files).map(([name,count]) => `<div>${name}: <strong>${count}</strong> rows</div>`).join('');
-        }
-        result.innerHTML = `<div style="background:#0d3320; border:1px solid #166534; border-radius:8px; padding:16px; color:#4ade80;">
-          <strong>Crosswalk built successfully!</strong><br>${filesHtml}
-        </div>`;
-        loadCustXW();
-        loadStats();
-        break;
-      } else if (sd.state === 'error') {
-        throw new Error(sd.result?.error || 'Build failed');
-      }
-      result.innerHTML = `<div style="color:#fbbf24;">Building... (${tries * 2}s elapsed)</div>`;
-      tries++;
+        let fh = sd.result?.files ? Object.entries(sd.result.files).map(([n,c]) => `${n}: <b>${c}</b> rows`).join('<br>') : '';
+        result.innerHTML = `<div style="background:#0d3320; border:1px solid #166534; border-radius:8px; padding:16px; color:#4ade80;"><strong>Crosswalk built!</strong><br>${fh}</div>`;
+        loadAllXW(); loadStats(); break;
+      } else if (sd.state === 'error') { throw new Error(sd.result?.error); }
+      result.innerHTML = `<div style="color:#fbbf24;">Building... (${tries*2}s)</div>`; tries++;
     }
-  } catch(e) {
-    result.innerHTML = `<div style="background:#3b1111; border:1px solid #991b1b; border-radius:8px; padding:16px; color:#f87171;">Error: ${e.message}</div>`;
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Upload & Build Crosswalk';
-  }
+  } catch(e) { result.innerHTML = `<div style="background:#3b1111; border:1px solid #991b1b; border-radius:8px; padding:16px; color:#f87171;">Error: ${e.message}</div>`; }
+  finally { btn.disabled = false; btn.textContent = 'Upload & Build Crosswalk'; }
 }
 
-async function loadCustXW() {
-  try {
-    const r = await fetch(`${API}/api/v1/crosswalk/customers?limit=50`);
-    const data = await r.json();
-    const tbl = document.getElementById('custXWTable');
-    const empty = document.getElementById('custXWEmpty');
-    if (data.length) {
-      empty.style.display = 'none';
-      tbl.innerHTML = '<tr><th>P21 ID</th><th>Customer</th><th>Ship-To</th><th>Zip</th><th>Source</th><th>Method</th><th>Seen</th></tr>' +
-        data.map(r => `<tr><td>${r.p21_customer_id||''}</td><td>${r.p21_customer_name||''}</td><td>${r.ship2_name||''}</td><td>${r.ship2_zip||''}</td><td>${r.source_system||''}</td><td>${r.match_method||''}</td><td>${r.seen_count||''}</td></tr>`).join('');
-    } else { empty.textContent = 'No crosswalk data yet. Build from P21 exports via POST /api/v1/crosswalk/build'; }
-  } catch(e) { document.getElementById('custXWEmpty').textContent = 'Error loading: ' + e.message; }
-}
-
-loadStats();
-loadQueue('all');
+loadStats(); loadQueue('all');
 setInterval(loadStats, 30000);
 </script>
 </body>
