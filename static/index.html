@@ -96,7 +96,6 @@ tr:hover { background: #141620; }
   <button class="tab active" onclick="showTab('queue')">Review Queue <span class="badge" id="queueBadge">0</span></button>
   <button class="tab" onclick="showTab('processed')">Processed <span class="badge" id="procBadge">0</span></button>
   <button class="tab" onclick="showTab('batch')">CISM Batch <span class="badge" id="batchBadge">0</span></button>
-  <button class="tab" onclick="showTab('upload')">Upload PO</button>
   <button class="tab" onclick="showTab('crosswalk')">Crosswalk</button>
   <button class="tab" onclick="showTab('cism')">CISM Schema</button>
   <button class="tab" onclick="showTab('pipeline')">Pipeline</button>
@@ -117,9 +116,28 @@ tr:hover { background: #141620; }
         </div>
       </div>
       <div id="poList"><div class="empty" style="padding:30px;">Loading...</div></div>
+      <div style="padding:12px 16px; border-top:1px solid #2a2d3a;">
+        <div style="font-size:11px;text-transform:uppercase;color:#64748b;letter-spacing:1px;margin-bottom:8px;">Add PO to Review</div>
+        <input type="file" id="fileUpload" accept=".xml,.pdf,.csv" style="font-size:11px;">
+        <select id="uploadSource" style="padding:4px;background:#0f1117;color:#e0e0e0;border:1px solid #2a2d3a;border-radius:4px;font-size:11px;margin-top:4px;">
+          <option value="ariba">Ariba</option><option value="coupa">Coupa</option><option value="direct">Email / Direct</option>
+        </select>
+        <button class="btn btn-green" onclick="uploadFile()" style="padding:4px 12px;font-size:11px;margin-top:4px;">Add</button>
+        <div id="uploadResult" style="font-size:11px;margin-top:4px;"></div>
+      </div>
     </div>
     <div class="detail-panel" id="detailPanel">
       <div class="empty">Select a PO from the queue to review</div>
+      <div style="background:#141620;border-radius:8px;padding:16px;margin-top:16px;">
+        <h3 style="font-size:14px;margin-bottom:12px;">Match Scoring Guide</h3>
+        <table style="font-size:13px;">
+          <tr><td><span class="score-pill hi">EXACT</span></td><td style="padding-left:12px;">100% — This customer has ordered this exact part before. Customer-specific match from SO history.</td></tr>
+          <tr><td><span class="score-pill hi">MATCHED</span></td><td style="padding-left:12px;">90% — Part exists in P21 and has been ordered by other customers. Confident match but not customer-specific.</td></tr>
+          <tr><td><span class="score-pill mid">FUZZY — verify</span></td><td style="padding-left:12px;">60-89% — Description or partial match found. The system is guessing — Brittany should verify or use Edit PO to pick the right item.</td></tr>
+          <tr><td><span class="score-pill lo">GUESS — review</span></td><td style="padding-left:12px;">1-59% — Very low confidence guess. Almost certainly needs manual remapping via Edit PO.</td></tr>
+          <tr><td><span class="score-pill lo">UNMAPPED</span></td><td style="padding-left:12px;">0% — No match found at all. New part number not in the crosswalk. Must be manually mapped or rejected.</td></tr>
+        </table>
+      </div>
     </div>
   </div>
 </div>
@@ -370,7 +388,7 @@ function selectPO(id) {
         <td>${l.qty_ordered || 0}</td>
         <td>$${(l.unit_price||0).toFixed?.(2) || '0.00'}</td>
         <td>${l.item_id_p21 || '<span style="color:#f87171">UNMAPPED</span>'}</td>
-        <td><span class="score-pill ${(l.crosswalk_match_score||0) >= 0.9 ? 'hi' : (l.crosswalk_match_score||0) >= 0.6 ? 'mid' : 'lo'}">${((l.crosswalk_match_score||0)*100).toFixed(0)}%</span></td>
+        <td>${matchLabel(l.crosswalk_match_score)}</td>
       </tr>`).join('')}
     </table>
     <div class="action-bar">
@@ -381,12 +399,21 @@ function selectPO(id) {
   `;
 }
 
+function matchLabel(score) {
+  const s = score || 0;
+  if (s >= 1.0) return '<span class="score-pill hi">EXACT</span>';
+  if (s >= 0.9) return '<span class="score-pill hi">MATCHED</span>';
+  if (s >= 0.6) return '<span class="score-pill mid">FUZZY — verify</span>';
+  if (s > 0) return '<span class="score-pill lo">GUESS — review</span>';
+  return '<span class="score-pill lo">UNMAPPED</span>';
+}
+
 async function approvePO(id) {
   const reviewer = prompt('Reviewer name:', 'Brittany');
   if (!reviewer) return;
   try {
-    await fetch(`${API}/api/v1/review/po/${id}/approve`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({reviewer, notes:''}) });
-    const ar = await r.json();
+    const resp = await fetch(`${API}/api/v1/review/po/${id}/approve`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({reviewer, notes:''}) });
+    const ar = await resp.json();
     alert(`Approved! Added to CISM batch.\n\nBatch now has ${ar.batch_headers||'?'} POs, ${ar.batch_lines||'?'} lines.\nGo to CISM Batch tab to see the file.`);
     loadQueue(currentFilter); loadStats();
     selectedId = null;
@@ -837,7 +864,7 @@ async function viewPO(intakeId) {
             <td>${l.qty_ordered||0}</td>
             <td>$${(l.unit_price||0).toFixed?.(2)||'0'}</td>
             <td>${l.item_id_p21||'<span style="color:#f87171">-</span>'}</td>
-            <td><span class="score-pill ${(l.crosswalk_match_score||0)>=0.9?'hi':(l.crosswalk_match_score||0)>=0.6?'mid':'lo'}">${((l.crosswalk_match_score||0)*100).toFixed(0)}%</span></td>
+            <td>${matchLabel(l.crosswalk_match_score)}</td>
           </tr>`).join('')}
         </table>
         ${po.cism ? `<div style="margin-top:8px;font-size:12px;color:#475569;">CISM: ${po.cism.import_set_no} | <a href="${API}/api/v1/cism/download/${po.intake_id}/header" style="color:#60a5fa;">Header</a> | <a href="${API}/api/v1/cism/download/${po.intake_id}/lines" style="color:#60a5fa;">Lines</a></div>` : ''}
